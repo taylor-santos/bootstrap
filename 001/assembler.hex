@@ -1,3 +1,6 @@
+# Copyright (c) 2022 Taylor Santos
+# MIT License
+
 # [0x0000]
 # ELF Header
 7f 45 4c 46              # EI_MAG:        ELF Magic Number

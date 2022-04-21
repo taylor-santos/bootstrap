@@ -1,3 +1,6 @@
+; Copyright (c) 2022 Taylor Santos
+; MIT License
+
 ; assembler.asm
 bits    64
 global  _start
