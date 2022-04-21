@@ -8,12 +8,10 @@ section .bss
 
 section .text
 _start:
-	xor r12, r12    ; EOF flag
 	xor r13, r13    ; buffer index
 	mov r14, buf    ; buffer pointer
 	sub rsp, 1
 	mov rsi, rsp
-
 prompt:
 	call gethex     ; read the next hex value into [rsp+1]
 	mov r9, [rsi]   ; store [rsp] into r9
@@ -26,9 +24,8 @@ prompt:
 	cmp r13, bsz
 	jl continue
 	call flush
-continue:
 	mov rsi, rsp
-	inc rsi
+continue:
 	jmp prompt
 
 gethex:
