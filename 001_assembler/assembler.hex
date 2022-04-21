@@ -41,8 +41,8 @@ e8 00 00 00 00 00 00 00  # p_memsz:       Size of Segment in Memory
 00 10 00 00 00 00 00 00  # p_offset:    * Segment Offset
 00 10 40 00 00 00 00 00  # p_vaddr:     * Segment Virtual Address
 00 10 40 00 00 00 00 00  # p_paddr:     * Segment Physical Address
-ea 00 00 00 00 00 00 00  # p_filesz:    * Size of Segment in File Image
-ea 00 00 00 00 00 00 00  # p_memsz:     * Size of Segment in Memory
+e9 00 00 00 00 00 00 00  # p_filesz:    * Size of Segment in File Image
+e9 00 00 00 00 00 00 00  # p_memsz:     * Size of Segment in Memory
 00 10 00 00 00 00 00 00  # p_align:       Alignment
 # +0x0038
 
@@ -54,7 +54,7 @@ ea 00 00 00 00 00 00 00  # p_memsz:     * Size of Segment in Memory
 00 20 40 00 00 00 00 00  # p_vaddr:       Segment Virtual Address
 00 20 40 00 00 00 00 00  # p_paddr:       Segment Physical Address
 00 00 00 00 00 00 00 00  # p_filesz:      Size of Segment in File Image
-40 00 00 00 00 00 00 00  # p_memsz:       Size of Segment in Memory
+80 00 00 00 00 00 00 00  # p_memsz:       Size of Segment in Memory
 00 10 00 00 00 00 00 00  # p_align:       Alignment
 # +0x0038
 
@@ -87,7 +87,7 @@ ea 00 00 00 00 00 00 00  # p_memsz:     * Size of Segment in Memory
 06 00 00 00 00 00 00 00  # sh_flags:       SHF_ALLOC|SHF_EXECINSTR - Occupies Memory and is Executable
 00 10 40 00 00 00 00 00  # sh_addr:      * Virtual address in memory if loaded
 00 10 00 00 00 00 00 00  # sh_offset:    * Offset in File Image
-ea 00 00 00 00 00 00 00  # sh_size:      * Size in File Image
+e9 00 00 00 00 00 00 00  # sh_size:      * Size in File Image
 00 00 00 00              # sh_link:        Associated Section Index
 00 00 00 00              # sh_info:        Extra Info
 10 00 00 00 00 00 00 00  # sh_addralign:   Alignment
@@ -101,7 +101,7 @@ ea 00 00 00 00 00 00 00  # sh_size:      * Size in File Image
 03 00 00 00 00 00 00 00  # sh_flags:       SHF_WRITE|SHF_ALLOC - Writable and Occupies Memory
 00 20 40 00 00 00 00 00  # sh_addr:        Virtual address in memory if loaded
 00 20 00 00 00 00 00 00  # sh_offset:      Offset in File Image
-40 00 00 00 00 00 00 00  # sh_size:        Size in File Image
+80 00 00 00 00 00 00 00  # sh_size:        Size in File Image
 00 00 00 00              # sh_link:        Associated Section Index
 00 00 00 00              # sh_info:        Extra Info
 04 00 00 00 00 00 00 00  # sh_addralign:   Alignment
@@ -184,89 +184,93 @@ e8 00 00 00 00 00 00 00  # sh_offset:      Offset in File Image
 # +0x0E02
 
 # [0x1000]
-# &buf = 0x402000
-#  bsz = 0x40
 # _start:
-    4d 31 ed                 # xor r13, r13    ; buffer index
-    49 be 00 20 40 00 00     # movabs buf, r14 ; buffer pointer
-    00 00 00                 #                 ; 
-    48 83 ec 01              # sub rsp, 0x1    ; stack space for read() buffer
-    48 89 e6                 # mov rsi, rsp    ; point rsi to top of stack
-# prompt:                                      ; +20
-    e8 28 00 00 00           # call gethex     ; store the first hex digit in [rsi], points to top of stack
-    4c 8b 0e                 # mov r9, [rsi]   ; 
-    49 c1 e1 04              # shl r9, 0x4     ; shift the first digit to the top 4 bits
-    e8 1c 00 00 00           # call gethex     ; 
-    4c 03 0e                 # add r9, [rsi]   ; combine the two digits into one byte
-    45 88 0e                 # mov [r14], r9b  ; store the byte in the buffer
-    49 ff c6                 # inc r14         ; increment the buffer pointer
-    49 ff c5                 # inc r13         ; increment the buffer index
-    49 83 fd 40              # cmp r13, bsz    ; check if buffer is full
-    7c 08                    # jl continue     ; if not, continue
-    e8 7b 00 00 00           # call flush      ; otherwise, flush buffer to stdout
-    48 89 e6                 # mov rsi, rsp    ; flush modifies rsi, so set it back to top of stack
-# continue:                                    ; +43
-    eb d3                    # jmp prompt      ; loop to get next set of digits
-# gethex:                                      ; +2
-    e8 57 00 00 00           # call getchar    ; read the next char from stdin
-    44 8a 06                 # mov r8b, [rsi]  ; 
-    49 83 f8 23              # cmp r8, '#'     ; check if it's the start of a comment
-    74 38                    # je comment      ; 
-    49 83 f8 30              # cmp r8, '0'     ; check if it's between '0' and '9'
-    7c ec                    # jl gethex       ; get next char if not
-    49 83 f8 39              # cmp r8, '9'     ; 
-    7f 06                    # jg gethex1      ; 
-    49 83 e8 30              # sub r8, '0'     ; if it is between '0' and '9', normalize and return it
-    eb 22                    # jmp rethex      ; 
-# gethex1:                                     ; +32
-    49 83 f8 41              # cmp r8, 'A'     ; check if it's between 'A' and 'F'
-    7c da                    # jl gethex       ; get next char if not
-    49 83 f8 46              # cmp r8, 'F'     ; 
-    7f 06                    # jg gethex2      ; 
-    49 83 e8 37              # sub r8, 'A'-0xA ; if it is between 'A' and 'F', normalize and return it
-    eb 10                    # jmp rethex      ; 
-# gethex2:                                     ; +18
-    49 83 f8 61              # cmp r8, 'a'     ; check if it's between 'a' and 'f'
-    7c c8                    # jl gethex       ; get next char if not
-    49 83 f8 66              # cmp r8, 'f'     ; 
-    7f c2                    # jg gethex       ; 
-    49 83 e8 57              # sub r8, 'a'-0xA ; if it is between 'a' and 'f', normalize and return it
-# rethex:                                      ; +16
-    44 88 06                 # mov [rsi], r8b  ; store the normalized digit in [rsi]
-    c3                       # ret             ;
-# comment:                                     ; +4
-    e8 11 00 00 00           # call getchar    ; loop, reading in one character at a time from stdin
-    44 8a 06                 # mov r8b, [rsi]  ; 
-    49 83 f8 0a              # cmp r8, `\n`    ; 
-    74 ac                    # je gethex       ; resume parsing hex digits if the line ends with '\n'
-    49 83 f8 0d              # cmp r8, `\r`    ; 
-    74 a6                    # je gethex       ; resume parsing hex digits if the line ends with '\r'
-    eb ea                    # jmp comment     ; loop
-# getchar:                                     ; +22
-    31 c0                    # xor eax, eax    ; read()
-    48 31 ff                 # xor rdi, rdi    ; STDIN
-    ba 01 00 00 00           # mov edx, 0x1    ; count
-    0f 05                    # syscall         ;
-    48 83 f8 00              # cmp rax, 0x0    ; check EOF
-    74 01                    # je done         ; 
-    c3                       # ret             ; 
-# done:                                        ; +19
-    e8 02 00 00 00           # call flush      ; 
-    eb 27                    # jmp exit        ; 
-# flush:                                       ; +7
-    b8 01 00 00 00           # mov eax, 0x1    ; write()
-    bf 01 00 00 00           # mov edi, 0x1    ; STDOUT
-    48 be 00 20 40 00 00     # mov rsi, buf    ; buf
-    00 00 00                 #                 ; 
-    4c 89 ea                 # mov rdx, r13    ; len
-    0f 05                    # syscall         ;
-    4d 31 ed                 # xor r13, r13    ; buffer index
-    49 be 00 20 40 00 00     # mov r14, buf    ; buffer pointer
-    00 00 00                 #                 ; 
-    c3                       # ret             ; 
-# exit                                         ; +39
-    b8 3c 00 00 00           # mov rax, 0x3c   ; exit()
-    bf 00 00 00 00           # mov rdi, 0x0    ; return code
-    0f 05                    # syscall         ; 
-#                                              ; +9
-# +0x00EA
+    41 bc 40 00 00 00      # mov    r12d, insz          ; in buf index
+    41 bd 40 00 00 00      # mov    r13d, insz          ; in read length
+    4d 31 f6               # xor    r14, r14            ; out buf index
+    49 bf 40 20 40 00 00   # movabs r15, outbuf         ; out buf pointer
+    00 00 00               #                            ;
+# prompt: +25              #                            ;
+    e8 22 00 00 00         # call   gethex              ; read the next hex value into rax
+    88 c3                  # mov    bl, al              ; copy digit into rbx
+    c0 e3 04               # shl    bl, 0x4             ; left shift digit by 4
+    e8 18 00 00 00         # call   gethex              ; read the next hex value into rax
+    00 c3                  # add    bl, al              ; add the two digits together
+    41 88 1f               # mov    [r15], bl           ; copy byte into buffer at current index
+    49 ff c7               # inc    r15                 ; increment buffer pointer
+    49 ff c6               # inc    r14                 ; increment buffer index
+    49 83 fe 40            # cmp    r14, outsz          ;
+    7c 05                  # jl     continue            ;
+    e8 78 00 00 00         # call   flush               ; if the output buffer is full, flush it
+# continue: +37            #                            ;
+    eb d9                  # jmp    prompt              ;
+# gethex: +2               #                            ;
+    e8 36 00 00 00         # call   getchar             ; read in a char, then try to convert to hex
+    3c 23                  # cmp    al, '#'             ;
+    74 23                  # je     comment             ;
+    3c 30                  # cmp    al, '0'             ;
+    7c f3                  # jl     gethex              ;
+    3c 39                  # cmp    al, '9'             ;
+    7f 04                  # jg     gethex1             ;
+    2c 30                  # sub    al, '0'             ;
+    eb 16                  # jmp    rethex              ;
+# gethex1: +21                                          ;
+    3c 41                  # cmp    al, 'A'             ;
+    7c e7                  # jl     gethex              ;
+    3c 46                  # cmp    al, 'F'             ;
+    7f 04                  # jg     gethex2             ;
+    2c 37                  # sub    al, 'A'-0xA         ;
+    eb 0a                  # jmp    rethex              ;
+# gethex2: +12                                          ;
+    3c 61                  # cmp    al, 'a'             ;
+    7c db                  # jl     gethex              ;
+    3c 66                  # cmp    al, 'f'             ;
+    7f d7                  # jg     gethex              ;
+    2c 57                  # sub    al, 'a'-0xA         ;
+# rethex: +10                                           ;
+    c3                     # ret                        ;
+# comment: +1                                           ;
+    e8 0a 00 00 00         # call   getchar             ; loop reading chars until a newline is hit
+    3c 0a                  # cmp    al, '\n'            ;
+    74 cb                  # je     gethex              ;
+    3c 0d                  # cmp    al, '\r'            ;
+    74 c7                  # je     gethex              ;
+    eb f1                  # jmp    comment             ;
+# getchar: +15                                          ;
+    4d 39 ec               # cmp    r12, r13            ; check if index has reached end of input buffer
+    7c 23                  # jl     nextchar            ;
+    48 31 c0               # xor    rax, rax            ; read()
+    48 31 ff               # xor    rdi, rdi            ; STDIN
+    48 be 00 20 40 00 00   # movabs rsi, inbuf          ; buf
+    00 00 00               #                            ;
+    ba 40 00 00 00         # mov    edx, insz           ; count
+    0f 05                  # syscall                    ;
+    48 83 f8 00            # cmp    rax, 0x0            ; if read() returned 0...
+    74 12                  # je     done                ; ...flush and exit
+    49 89 c5               # mov    r13, rax            ; store read count as new buffer size
+    4d 31 e4               # xor    r12, r12            ; reset input buf index
+# nextchar: +40                                         ;
+    49 8b 84 24 00 20 40   # mov    rax, [r12+inbuf]    ;
+    00                     #                            ;
+    49 ff c4               # inc    r12                 ;
+    c3                     # ret                        ;
+# done: +12                                             ;
+    e8 02 00 00 00         # call   flush               ;
+    eb 27                  # jmp    exit                ;
+# flush: +7                                             ;
+    b8 01 00 00 00         # mov    eax, 0x1            ; write()
+    bf 01 00 00 00         # mov    edi, 0x1            ; STDOUT
+    48 be 40 20 40 00 00   # movabs rsi, outbuf         ; buf
+    00 00 00               #                            ;
+    4c 89 f2               # mov    rdx, r14            ; len
+    0f 05                  # syscall                    ;
+    4d 31 f6               # xor    r14, r14            ; buffer index
+    49 bf 40 20 40 00 00   # movabs r15, outbuf         ; buffer pointer
+    00 00 00               #                            ;
+    c3                     # ret                        ;
+# exit: +39                                             ;
+    b8 3c 00 00 00         # mov    eax, 0x3c           ; exit()
+    bf 00 00 00 00         # mov    edi, 0x0            ; return code
+    0f 05                  # syscall                    ;
+# +12
+# +0x00E9
