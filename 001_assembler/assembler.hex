@@ -183,6 +183,14 @@ e8 00 00 00 00 00 00 00  # sh_offset:      Offset in File Image
 0000
 # +0x0E02
 
+# Register allocations:
+#   rax    get* return value
+#   rbx    current hex digit
+#   r12    in index
+#   r13    in size
+#   r14    out index
+#   r15    out ptr
+
 # [0x1000]
 # _start:
     41 bc 40 00 00 00      # mov    r12d, insz          ; in buf index

@@ -1,11 +1,17 @@
-assembler1: assembler0 001_assembler/assembler.hex
-	./assembler0 < 001_assembler/assembler.hex > $@
+assembler0: assembler 001_assembler/assembler.hex
+	$(info $@)
+	@./assembler < 001_assembler/assembler.hex > $@
+	@./$@ < 001_assembler/assembler.hex | diff $@ -
+	$(info  - $@ bootstraps itself)
 
-assembler0: assembler.o
-	ld -s -o $@ $<
+assembler: assembler.o
+	$(info $@)
+	@ld -s -o $@ $<
 
-assembler.o: 001_assembler/assembler.asm
-	nasm -f elf64 -o $@ $<
+.INTERMEDIATE: assembler.o
+assembler.o: 000_assembler/assembler.asm
+	$(info $@)
+	@nasm -f elf64 -o $@ $<
 
 clean:
-	@rm -f assembler.o assembler0 assembler1
+	@rm -f assembler.o assembler0
