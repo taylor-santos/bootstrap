@@ -6,11 +6,67 @@ bits    64
 global  _start
 
 section .rodata
+    s_endl: db `\n`
+    s_tab:  db `\t`
+    s_lbl: db 'label:', `\t`
+    z_lbl: equ $-s_lbl
+    s_id:  db 'ident:', `\t`
+    z_id:  equ $-s_id
+    s_hex: db 'hex:  ', `\t`
+    z_hex: equ $-s_hex
+    s_ins: db 'instr:', `\t`
+    z_ins: equ $-s_ins
+
+    im_call: db 'call'
+    il_call: equ $-im_call
+    im_je: db 'je'
+    il_je: equ $-im_je
+    im_jg: db 'jg'
+    il_jg: equ $-im_jg
+    im_jge: db 'jge'
+    il_jge: equ $-im_jge
+    im_jl: db 'jl'
+    il_jl: equ $-im_jl
+    im_jle: db 'jle'
+    il_jle: equ $-im_jle
+    im_jmp: db 'jmp'
+    il_jmp: equ $-im_jmp
+    im_jne: db 'jne'
+    il_jne: equ $-im_jne
+    im_ret: db 'ret'
+    il_ret: equ $-im_ret
+    im_syscall: db 'syscall'
+    il_syscall: equ $-im_syscall
+
 table:
-        endl: db `\n`
+	dq im_call
+	dq il_call
+	row_w: equ $-table            ; calculate the width in bytes of one table row
+	dq im_je
+	dq il_je
+	dq im_jg
+	dq il_jg
+	dq im_jge
+	dq il_jge
+	dq im_jl
+	dq il_jl
+	dq im_jle
+	dq il_jle
+	dq im_jmp
+	dq il_jmp
+	dq im_jne
+	dq il_jne
+	dq im_ret
+	dq il_ret
+	dq im_syscall
+	dq il_syscall
+	row_c: equ ($-table)/row_w    ; calculate the total number of rows in the table
+	table_end: equ $
 
 section .bss
 	brkinc:  equ 64
+	int_to_str_buf: resb 32
+
 
 ; r12 - Current source code pointer
 ; r13 - Start of current token
@@ -44,13 +100,59 @@ gets:
 
 	mov r12, [rsp]           ; set source code ptr to bottom of brk
 	push rbx                 ; push top of brk to stack
-	jmp scan
+scan_loop:
+	call scan
+	cmp rax, -1
+	je exit
+
+	cmp rax, 0x0
+	jne scan_loop1
+	mov rsi, s_hex
+	mov rdx, z_hex
+	jmp print_token
+
+scan_loop1:
+	cmp rax, 0x1
+	jne scan_loop2
+	mov rsi, s_lbl
+	mov rdx, z_lbl
+	jmp print_token
+
+scan_loop2:
+	cmp rax, 0x2
+	jne scan_loop3
+	mov rsi, s_id
+	mov rdx, z_id
+	jmp print_token
+
+scan_loop3:
+	mov rsi, s_ins
+	mov rdx, z_ins
+	jmp print_token
+	
+print_token:
+	mov rdi, 0x1    ; STDOUT
+	mov rax, 0x1    ; write()
+	syscall
+
+	mov rax, 0x1    ; write()
+	mov rdi, 0x1    ; STDOUT
+	mov rsi, r13
+	mov rdx, r12
+	sub rdx, r13
+	syscall
+	call println
+
+	jmp scan_loop
 
 scan_restart:
 	inc r12
 scan:
 	cmp r12, rbx
-	jge exit
+	jl scan0
+	mov rax, -1
+	ret
+scan0:
 	mov r13, r12             ; set start address of current token
 	mov al, [r12]
 	cmp al, '#'
@@ -86,6 +188,8 @@ scan_mhex: ; scan maybe hex - could be hex or identifier
 	jl scan_hex_end
 	cmp al, '9'
 	jle scan_mhex
+	cmp al, ':'
+	jle scan_label_end
 	cmp al, 'A'
 	jl scan_hex_end
 	cmp al, 'F'
@@ -120,17 +224,8 @@ scan_hex:
 	cmp al, 'f'
 	jle scan_hex
 scan_hex_end:
-	mov rax, 0x1
-	mov rdi, 0x1
-	mov rsi, r13
-	mov rdx, r12
-	sub rdx, r13
-	syscall
-	mov rax, 0x1
-	mov rsi, endl
-	mov rdx, 1
-	syscall
-	jmp scan
+	mov rax, 0x0
+	ret
 
 scan_ident:
 	inc r12
@@ -141,6 +236,8 @@ scan_ident:
 	jl scan_ident_end
 	cmp al, '9'
 	jle scan_ident
+	cmp al, ':'
+	je scan_label_end
 	cmp al, 'A'
 	jl scan_ident_end
 	cmp al, 'Z'
@@ -152,22 +249,77 @@ scan_ident:
 	cmp al, 'z'
 	jle scan_ident
 scan_ident_end:
-	mov rax, 0x1
-	mov rdi, 0x1
-	mov rsi, r13
+	; mov rax, 0x1
+	; mov rdi, 0x1
+	; mov rsi, r13
+	; mov rdx, r12
+	; sub rdx, r13
+	; syscall
+	; call println
+	mov r14, 0x0 ; initialize table index
+table_loop:
+	cmp r14, row_c
+	jge end_table_loop
+
 	mov rdx, r12
 	sub rdx, r13
-	syscall
+
+	; convert table index into row address
+	mov r15, r14
+	imul r15, row_w
+	add r15, table
+
+	cmp rdx, [r15 + 8] ; length of instruction entry
+	jne loop_continue
+	mov rdi, [r15]     ; table instruction string
+	mov rsi, r13       ; actual instruction string
+	call strncmp
+	test rax, rax
+	jne loop_continue
+
+	; mov rdi, r15    ; int_to_str argument
+	; call print_int
+	; call print_tab
+
+	; mov rdi, [r15]
+	; call print_int
+	; call print_tab
+
+	; mov rdi, [r15 + 8]
+	; call print_int
+	; call print_tab
+
+	; ; print the instruction
+	; mov rsi, [r15]        ; buf
+	; mov rdx, [r15 + 8]    ; len
+	; mov rax, 0x1          ; write()
+	; mov rdi, 0x1          ; STDOUT
+	; syscall
+
+	; call println
+
+	mov rax, r14
+	add rax, 0x3
+	ret
+
+loop_continue:
+	inc r14
+	jmp table_loop
+
+end_table_loop:
+	mov rax, 0x2
+	ret
+
+scan_label_end:
 	mov rax, 0x1
-	mov rsi, endl
-	mov rdx, 1
-	syscall
-	jmp scan
+	ret
 
 scan_comment:
 	inc r12
 	cmp r12, rbx
-	jge exit
+	jl scan_comment0
+	ret
+scan_comment0:
 	mov al, [r12]
 	cmp al, `\n`
 	je scan
@@ -180,251 +332,102 @@ exit:
 	mov rdi, 0x0    ; return code
 	syscall
 
+; calculates edi % 10 and returns rax
+; clobbers rcx
+mod10:
+	mov     eax, edi
+	mov     ecx, 10
+	cdq
+	idiv    ecx
+	mov     eax, edx
+	ret
 
+; calculates edi / 10 and returns rax
+; clobbers rcx
+div10:
+	mov     eax, edi
+	mov     ecx, 10
+	cdq
+	idiv    ecx
+	ret
 
-; 	mov r12, insz   ; in buf index
-; 	mov r13, insz   ; read in count
-; 	xor r14, r14    ; out buf index
-; 	sub rsp, 8      ; instruction count on stack
-; 	xor rdi, rdi    ; arg <- 0
-; 	mov rax, 0x0c   ; brk()
-; 	syscall         ; call brk(0)
-; 	push rax        ; push current brk address to stack
+; writes rdi as a string to int_to_str_buf
+; rdi - input int, gets overwritten
+; returns rax - length of written string
+; clobbers r10, rcx
+int_to_str:
+	mov r10, int_to_str_buf
+	call int_to_str_recurse
+	mov rax, r10
+	sub rax, int_to_str_buf
+	ret
+int_to_str_recurse:
+	call mod10
+	add rax, '0'
+	cmp rdi, 10
+	jl int_to_str_end
+	push rax
+	call div10
+	mov rdi, rax
+	call int_to_str_recurse
+	pop rax
+int_to_str_end:
+	mov [r10], al
+	inc r10
+	ret
+	mov [r10], BYTE '0'
+	inc r10
+	ret
 
-; 	xor r15, r15    ; set current brk size to 0
-; prompt:
-; 	jmp scanstart
+print_int:
+	call int_to_str
+	mov rdx, rax    ; len
+	mov rax, 0x1    ; write()
+	mov rdi, 0x1    ; STDOUT
+	mov rsi, int_to_str_buf
+	syscall
+	ret
 
-; scanrestart:
-; 	call getchar             ;
-; scanstart:
-; 	xor rbx, rbx             ; reset tok buffer index
-; 	call peekchar            ;
-; 	cmp al, '#'              ;
-; 	je scan_comment          ; start of comment
-; 	cmp al, '.'              ;
-; 	je scan_ident            ; '.', ident
-; 	cmp al, '0'              ;
-; 	jl scanrestart           ; [,'0'), restart
-; 	cmp al, '9'              ;
-; 	jle scan_hex             ; ['0', '9'], definitely hex
-; 	cmp al, 'A'              ;
-; 	jl scanrestart           ; ('9', 'A'), restart
-; 	cmp al, 'F'              ;
-; 	jle scan_maybehex        ; ['A', 'F'], maybe hex
-; 	cmp al, 'Z'              ;
-; 	jle scan_ident           ; ('F', 'Z'], ident
-; 	cmp al, '_'              ;
-; 	je scan_ident            ; '_', ident
-; 	cmp al, 'a'              ;
-; 	jl scanrestart             ; ('Z', 'a'), restart
-; 	cmp al, 'f'              ;
-; 	jle scan_maybehex        ; ['a', 'f'], maybe hex
-; 	cmp al, 'z'              ;
-; 	jle scan_ident           ; ('f', 'z'], ident
-; 	jmp scanrestart          ; ('z',), restart
+println:
+	mov rax, 0x1
+	mov rsi, s_endl
+	mov rdx, 0x1
+	syscall
+	ret
 
-; scan_maybehex:
-; 	call getchar             ;
-; 	mov rdi, [rsp]           ; store current break in rdi
-; 	call storebrk            ; store the current char in brk
-; 	call peekchar            ;
-; 	cmp al, '0'              ;
-; 	jl scan_hex_end          ; [,'0'), restart
-; 	cmp al, '9'              ;
-; 	jle scan_hex             ; ['0', '9'], definitely hex
-; 	cmp al, 'A'              ;
-; 	jl scan_hex_end          ; ('9', 'A'), restart
-; 	cmp al, 'F'              ;
-; 	jle scan_maybehex        ; ['A', 'F'], maybe hex
-; 	cmp al, 'Z'              ;
-; 	jle scan_ident           ; ('F', 'Z'], ident
-; 	cmp al, '_'              ;
-; 	je scan_ident            ; '_', ident
-; 	cmp al, 'a'              ;
-; 	jl scan_hex_end          ; ('Z', 'a'), restart
-; 	cmp al, 'f'              ;
-; 	jle scan_maybehex        ; ['a', 'f'], maybe hex
-; 	cmp al, 'z'              ;
-; 	jle scan_ident           ; ('f', 'z'], ident
-; 	jmp scan_hex_end         ; ('z',), restart
+print_tab:
+	mov rax, 0x1
+	mov rsi, s_tab
+	mov rdx, 0x1
+	syscall
+	ret
 
-
-; scan_hex:
-; 	call getchar             ; store current char in rax
-; 	mov rdi, [rsp]           ; store current break in rdi
-; 	call storebrk            ; store the current char in brk
-; 	call peekchar            ;
-; 	cmp al, '0'              ;
-; 	jl scan_hex_end          ; [,'0'), restart
-; 	cmp al, '9'              ;
-; 	jle scan_hex             ; ['0', '9'], definitely hex
-; 	cmp al, 'A'              ;
-; 	jl scan_hex_end          ; ('9', 'A'), restart
-; 	cmp al, 'F'              ;
-; 	jle scan_hex             ; ['A', 'F'], maybe hex
-; 	cmp al, 'a'              ;
-; 	jl scan_hex_end          ; ('F', 'a'), restart
-; 	cmp al, 'f'              ;
-; 	jle scan_hex             ; ['a', 'f'], maybe hex
-; 	jmp scan_hex_end         ; ('f',), restart
-
-; scan_hex_end: ; all scanned chars are hex, parse the buffer
-; 	mov r10, 2               ; current brk index
-; 	mov rdi, [rsp]           ; brk base pointer
-; scan_hex_end_loop:
-; 	cmp r10, rbx
-; 	jg scan_hex_end_finish
-; 	mov al, [rdi]
-; 	shl rax, 4
-; 	add al, [rdi + 1]
-; 	call putchar
-; 	add rdi, 2
-; 	add r10, 2
-; 	jmp scan_hex_end_loop
-; scan_hex_end_finish:
-; 	xor rbx, rbx             ; reset brk index
-; 	jmp scanstart
-
-; scan_ident:
-; 	call getchar         ;
-; 	mov rdi, [rsp]           ; store current break in rdi
-; 	call storebrk            ; store the current char in brk
-
-; scan_comment:
-; 	call getchar     ;
-; 	cmp al, `\n`     ;
-; 	je scanstart     ;
-; 	cmp al, `\r`     ;
-; 	je scanstart     ;
-; 	jmp scan_comment ;
-
-
-; ; rax - input char
-; hex_to_byte:
-; 	cmp rax, '0'
-; 	jge hex_to_byte0
-; 	mov rax, -1
-; 	ret
-; hex_to_byte0:
-; 	cmp rax, '9'
-; 	jg hex_to_byte1
-; 	sub rax, '0'
-; 	ret
-; hex_to_byte1:
-; 	cmp rax, 'A'
-; 	jge hex_to_byte2
-; 	mov rax, -1
-; 	ret
-; hex_to_byte2:
-; 	cmp rax, 'F'
-; 	jg hex_to_byte3
-; 	sub rax, 'A'-0xA
-; 	ret
-; hex_to_byte3:
-
- 
-; ; args:
-; ;   rax - char to be stored
-; ;   rdi - base of current break
-; ;   r15 - current size of break, may be increased
-; ;   rbx - index of current space in break
-; storebrk:
-; 	cmp rbx, r15
-; 	jl storebrk0
-; 	add r15, brkinc     ; increment brk size
-; 	push rdi            ; save old brk address
-; 	add rdi, r15        ; calc new brk address
-; 	push rax            ; save input char
-; 	mov rax, 0x0c       ; brk()
-; 	syscall
-; 	pop rax             ; restore char
-; 	pop rdi             ; restore old brk address
-; storebrk0:
-; 	mov [rdi + rbx], al ; store char in brk
-; 	inc rbx             ; increment index
-; 	ret
-
-; peekchar:
-; 	cmp r12, r13    ; check if index has reached end of input buffer
-; 	jl peeknextchar
-; 	xor rax, rax    ; read()
-; 	xor rdi, rdi    ; STDIN
-; 	mov rsi, inbuf  ; buf
-; 	mov edx, insz   ; count
-; 	syscall
-; 	mov r13, rax
-; 	xor r12, r12    ; reset input buf index
-; 	test rax, rax
-; 	jne peeknextchar; if not EOF, peek next char
-; 	ret             ; if EOF, return '\0'
-; peeknextchar:
-; 	xor rax, rax
-; 	mov al, [inbuf + r12]
-; 	ret
-
-; getchar:
-; 	cmp r12, r13    ; check if index has reached end of input buffer
-; 	jl nextchar
-; 	xor rax, rax    ; read()
-; 	xor rdi, rdi    ; STDIN
-; 	mov rsi, inbuf  ; buf
-; 	mov edx, insz   ; count
-; 	syscall
-; 	test rax, rax   ;
-; 	je done         ; if read() returned 0 flush and exit
-; 	mov r13, rax
-; 	xor r12, r12    ; reset input buf index
-; nextchar:
-; 	xor rax, rax
-; 	mov al, [inbuf + r12]
-; 	inc r12
-; 	ret
-; done:
-; 	call flush
-; 	jmp exit
-
-; ; rax - input char
-; ; r14 - current index
-; putchar:
-; 	mov [outbuf + r14], al
-; 	inc r14
-; 	cmp r14, outsz
-; 	jge flush
-; 	ret
-
-; flush:
-; 	mov eax, 0x1    ; write()
-; 	mov edi, 0x1    ; STDOUT
-; 	mov rsi, outbuf ; buf
-; 	mov rdx, r14    ; len
-; 	syscall
-; 	xor r14, r14    ; buffer index
-; 	ret
-
-; ; %rdi - pointer to str1
-; ; %rsi - pointer to str2
-; ; 
-; ; %rax - return value:
-; ;        <0 the first character that does not match has a lower value in ptr1 than in ptr2
-; ;        0  the contents of both strings are equal
-; ;        >0 the first character that does not match has a greater value in ptr1 than in ptr2
-; strcmp:                   ; 
-; 	xor eax, eax          ; init output to 0
-; 	jmp _strcmp1          ; 
-; _strcmp0:                 ; :current str1 char is not null
-; 	add rax, 1            ; increment index
-; 	cmp dl, cl            ; compare current str1 and str2 chars
-; 	jne _strcmp2          ; if they aren't equal, jump to _strcmp2, otherwise continue
-; _strcmp1:                 ; :start the loop
-; 	mov dl, [rdi+rax]     ; get next str1 char
-; 	mov cl, [rsi+rax]     ; get next str2 char
-; 	test dl, dl           ; check c1...
-; 	jne _strcmp0          ; ...if it isn't null, jmp to _strcmp0
-; 	mov al, cl            ; str1 ran out of chars, so return negative of current str2 char
-; 	neg eax               ; ~
-; 	ret                   ; ~
-; _strcmp2:                 ; :current str1 and str2 don't match
-; 	movzx eax, dl         ; set eax to current char1
-; 	sub eax, ecx          ; subtract current char2
-; 	ret                   ; 
+; rdi - str1
+; rsi - str2
+; rdx - n
+; rax: returns 0 if equal, otherwise relative difference of first different char
+strncmp:
+	xor eax, eax
+	test rdx, rdx
+	jne strncmp2
+	jmp strncmp5
+strncmp1:
+	cmp cl, r8b
+	jne strncmp3
+	inc rax
+	cmp rdx, rax
+	je strncmp4
+strncmp2:
+	movzx ecx, BYTE [rdi + rax]
+	movzx r8d, BYTE [rsi + rax]
+	test cl, cl
+	jne strncmp1
+strncmp3:
+	movzx eax, cl
+	sub eax, r8d
+	ret
+strncmp4:
+	xor eax, eax
+	ret
+strncmp5:
+	ret
