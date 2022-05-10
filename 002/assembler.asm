@@ -6,17 +6,6 @@ bits    64
 global  _start
 
 section .rodata
-	s_endl: db `\n`
-	s_tab:  db `\t`
-	s_lbl: db 'label:', `\t`
-	z_lbl: equ $-s_lbl
-	s_id:  db 'ident:', `\t`
-	z_id:  equ $-s_id
-	s_hex: db 'hex:  ', `\t`
-	z_hex: equ $-s_hex
-	s_ins: db 'instr:', `\t`
-	z_ins: equ $-s_ins
-
 	im_call: db 'call'
 	il_call: equ $-im_call
 	im_je: db 'je'
@@ -43,7 +32,7 @@ table:
 	db il_call, 1, 0xE8, 0
 	row_w: equ $-table            ; calculate the width in bytes of one table row
 	dq im_je
-	db il_je, 2, 0x0F, 0xCD
+	db il_je, 2, 0x0F, 0x84
 	dq im_jg
 	db il_jg, 2, 0x0F, 0x8F
 	dq im_jge
@@ -51,7 +40,7 @@ table:
 	dq im_jl
 	db il_jl, 2, 0x0F, 0x8C
 	dq im_jle
-	db il_jle, 2, 0x8F, 0x8E
+	db il_jle, 2, 0x0F, 0x8E
 	dq im_jmp
 	db il_jmp, 1, 0xE9, 0
 	dq im_jne
@@ -65,48 +54,30 @@ table:
 
 section .bss
 	brkinc:         equ 64
-	int_to_str_buf: resb 32
-	out_sz:         equ 64
-	out_buf:        resb out_sz
-
 
 ; r12 - Current source code pointer
 ; r13 - Start of current token
-; r14 - Current instruction pointer in brk
-; r15 - Output buffer index
+; r14 - End of output buffer
+; r15 - Current output buffer address
 ; rbx - Source code end pointer
 
 ; stack:
-; [ bottom of brk   ]
-; ; [ end of code brk ]
+; [ end of input buffer / start of output ]
+; [ end of output buffer ]
 
 section .text
 _start:
-	xor r15, r15             ; initialize output buffer index
-	xor rdi, rdi             ; arg <- 0
-	mov rax, 0x0c            ; SYS_brk
-	syscall                  ; call brk(0)
-	push rax                 ; save bottom of brk to stack
-	mov r12, rax             ; set source code ptr to bottom of brk
-	mov rbx, rax             ; set rbx to brk pointer
-	mov rdx, brkinc          ; SYS_read count argument
-gets:
-	lea rdi, [rbx + brkinc]  ; increment brk pointer and store in brk() arg
-	mov rax, 0x0c            ; SYS_brk
-	syscall                  ; brk()
-	mov rsi, rbx             ; arg: buf
-	mov rbx, rax             ; set brk pointer to new increment
-	mov rax, 0x0             ; arg: SYS_read
-	xor rdi, rdi             ; arg: STDIN
-	syscall                  ; read()
-	cmp rax, brkinc          ;
-	je NEAR gets             ; keep reading as long as EOF is not encountered
-	lea r14, [rsi + rax]     ; initialize instruction pointer to end of code
-	mov rbx, r14
+	push rbp
+	mov rbp, rsp
+	call stdin_to_heap
+	push rbx             ; store output buffer address on stack
+	mov r10, 0xDEADBEEFDEADBEEF  ;
+	push r10             ; reserve space for buffer size (to be filled after parsing)
+	mov r15, rbx
 scan_loop:
 	call scan
 	cmp rax, -1
-	je NEAR exit
+	je NEAR ident_pass
 
 	cmp rax, 0x0
 	jne NEAR scan_loop1
@@ -130,12 +101,32 @@ scan_loop1: ; label?
 	jne NEAR scan_loop2
 	; scanner returned label
 	; TODO
+	mov r10, r12 ;
+	sub r10, r13 ; calculate label width
+	shl r10, 1
+	push r10     ; store label width
+	push r13     ; store label text address
+	push r15     ; store current instruction address
 	jmp QWORD scan_loop
 
 scan_loop2: ; identifier?
 	cmp rax, 0x2
 	jne NEAR scan_loop3
 	; scanner returned identifier
+	mov r10, r12     ;
+	sub r10, r13     ; calculate label width
+	shl r10, 1       ; unset ident flag
+	inc r10          ; set ident flag
+	push r10         ; store label width + flag
+	push r13         ; store label text address
+	push r15         ; store current instruction address
+
+	mov rdx, 0x7F    ;
+	call putc        ;
+	call putc        ;
+	call putc        ;
+	call putc        ; save a dummy address to output
+	
 	; TODO
 	jmp QWORD scan_loop
 
@@ -277,18 +268,15 @@ scan_ident_end:
 table_loop:
 	cmp dl, [r15 + 8]            ; get length from table and compare to strlen
 	jne NEAR table_loop_continue ; continue if lengths are different
-
 	mov rdi, [r15]               ; strncmp str1 arg: table instruction string
 	call strncmp
 	test rax, rax                ;
 	jne NEAR table_loop_continue ; continue if token doesn't match table entry
-
 	mov rax, r14 ; 
 	add rax, 0x3 ; return instruction table index offset by other token types
 	pop r15
 	pop r14
 	ret
-
 table_loop_continue:
 	add r15, row_w      ; increment table pointer
 	inc r14             ;
@@ -318,84 +306,86 @@ scan_comment0:
 	je NEAR scan
 	jmp QWORD scan_comment
 
-exit:
-	call flush
-	mov rax, 0x3c   ; exit()
-	mov rdi, 0x0    ; return code
-	syscall
 
-; calculates edi % 10 and returns rax
-; clobbers rcx
-mod10:
-	mov     eax, edi
-	mov     ecx, 10
-	cdq
-	idiv    ecx
-	mov     eax, edx
+ident_pass:
+	mov [rbp - 16], r15
+	lea r12, [rbp - 24]     ; ident symbol table pointer
+ident_loop:
+	cmp r12, rsp
+	jle NEAR ident_loop_end
+
+	mov rdx, [r12]          ; get flag/ident length
+	test rdx, 1             ; check ident flag
+	je NEAR ident_loop_continue
+	shr rdx, 1              ; remove flag bit
+	mov rdi, [r12 - 8]      ; ident text pointer
+
+	lea r13, [rbp - 24]     ; label symbol table pointer
+label_loop:
+	cmp r13, rsp
+	jle NEAR label_loop_end
+
+	mov r10, [r13]          ; get flag/ident length
+	test r10, 1             ; check ident flag
+	jne NEAR label_loop_continue ; continue if not a label
+	shr r10, 1              ; remove flag bit
+	cmp r10, rdx            ; compare label length with ident length
+	jne NEAR label_loop_continue ; continue if lengths differ
+	mov rsi, [r13 - 8]      ; label text into strncmp str2 arg
+	call strncmp
+	test rax, rax                ;
+	jne NEAR label_loop_continue ; continue if token doesn't match table entry
+	mov r10, [r13 - 16]     ;
+	sub r10, [r12 - 16]     ; calculate offset between ident and label
+	sub r10, 4              ; account for width of jump address
+	mov r11, [r12 - 16]
+	mov DWORD [r11], r10d          ; overwrite output at correct location with offset value
+
+	jmp QWORD ident_loop_continue ; matching label found, continue to next ident
+
+label_loop_continue:
+	sub r13, 3*8            ; increment label symbol table pointer
+	jmp QWORD label_loop
+
+label_loop_end:
+	jmp QWORD exit_failure        ; no labels matching ident found
+
+ident_loop_continue:
+	sub r12, 3*8            ; increment ident symbol table pointer
+	jmp QWORD ident_loop
+
+ident_loop_end:
+	jmp QWORD exit
+
+
+; Read the whole contents of stdin onto the heap.
+; Returns:
+;   r12 - pointer to start of block
+;   rbx - pointer to end of block
+;   r14 - pointer to top of brk
+stdin_to_heap:
+	mov rax, 0x0c            ; SYS_brk
+	xor rdi, rdi             ; arg: brk
+	syscall                  ; brk(0)
+	mov rsi, rax             ; SYS_read buf argument
+	mov r12, rax             ; output
+	mov rdx, brkinc          ; SYS_read count argument
+stdin_to_heap0:
+	lea rdi, [rsi + brkinc]  ; set brk arg
+	mov rax, 0x0c            ; SYS_brk
+	syscall                  ; brk()
+	xor rax, rax             ; SYS_read
+	xor rdi, rdi             ; STDIN
+	syscall                  ; read()
+	cmp rax, brkinc          ;
+	jl NEAR stdin_to_heap1   ; exit loop when EOF is encountered
+	add rsi, brkinc          ; increment brk pointer
+	jmp QWORD stdin_to_heap0 ; loop until EOF is encountered
+stdin_to_heap1:
+	lea rbx, [rsi + rax]     ; output end of input
+	lea r14, [rsi + brkinc]  ; output top of brk
 	ret
 
-; calculates edi / 10 and returns rax
-; clobbers rcx
-div10:
-	mov     eax, edi
-	mov     ecx, 10
-	cdq
-	idiv    ecx
-	ret
-
-; writes rdi as a string to int_to_str_buf
-; rdi - input int, gets overwritten
-; returns rax - length of written string
-; clobbers r10, rcx
-int_to_str:
-	mov r10, int_to_str_buf
-	call int_to_str_recurse
-	mov rax, r10
-	sub rax, int_to_str_buf
-	ret
-int_to_str_recurse:
-	call mod10
-	add rax, '0'
-	cmp rdi, 10
-	jl NEAR int_to_str_end
-	push rax
-	call div10
-	mov rdi, rax
-	call int_to_str_recurse
-	pop rax
-int_to_str_end:
-	mov [r10], al
-	inc r10
-	ret
-	mov [r10], BYTE '0'
-	inc r10
-	ret
-
-; print rdi to stdout
-; clobbers r10, rcx
-print_int:
-	call int_to_str
-	mov rdx, rax    ; len
-	mov rax, 0x1    ; write()
-	mov rdi, 0x1    ; STDOUT
-	mov rsi, int_to_str_buf
-	syscall
-	ret
-
-println:
-	mov rax, 0x1    ; SYS_write
-	mov rdi, 0x1    ; STDOUT
-	mov rsi, s_endl ; buf
-	mov rdx, 0x1    ; count
-	syscall
-	ret
-
-print_tab:
-	mov rax, 0x1
-	mov rsi, s_tab
-	mov rdx, 0x1
-	syscall
-	ret
 
 ; rdi - str1
 ; rsi - str2
@@ -443,23 +433,37 @@ hex_to_byte2:
 hex_to_byte3:
 	ret
 
-; rdx - write lowest byte to output buffer
+; rdx - write lowest byte to output buffer on heap
 putc:
-	cmp r15, out_sz
+	cmp r15, r14              ; check if buffer is full
 	jl NEAR putc0
-	push rdx
-	call flush
-	pop rdx
+	lea rdi, [r14 + brkinc]   ; arg: brk
+	mov rax, 0x0c             ; SYS_brk
+	syscall
+	mov r14, rdi
 putc0:
-	mov [out_buf + r15], dl
+	mov [r15], dl
 	inc r15
 	ret
 
+; rsi - pointer to start
+; rdx - total size
 flush:
-	mov rax, 0x1     ; SYS_write
-	mov rdi, 0x1     ; STDOUT
-	mov rsi, out_buf ; buf
-	mov rdx, r15     ; count
+	mov rax, 0x1       ; SYS_write
+	mov rdi, 0x1       ; STDOUT
 	syscall
-	xor r15, r15     ; reset index
 	ret
+
+exit:
+	mov rsi, [rbp - 8]
+	mov rdx, [rbp - 16]       ;
+	sub rdx, rsi              ; subtract start from end to get length of output
+	call flush
+	mov rax, 0x3c   ; SYS_exit
+	mov rdi, 0x0    ; return code
+	syscall
+
+exit_failure:
+	mov rax, 0x3c   ; SYS_exit
+	mov rdi, 0x1    ; return code
+	syscall
