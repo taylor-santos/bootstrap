@@ -1,0 +1,843 @@
+# Copyright (c) 2022 Taylor Santos
+# MIT License
+
+section .text
+
+_start:
+        55                      # push   %rbp
+        48 89 e5                # mov    %rsp,%rbp
+        call stdin_to_heap
+        53                      # push   %rbx
+        48 83 ec 30             # sub    $0x30,%rsp
+        48 c7 45 e8 ff ff ff    # movq   $0xffffffffffffffff,-0x18(%rbp)
+        ff
+        48 8d bb 00 10 00 00    # lea    0x1000(%rbx),%rdi
+        b8 0c 00 00 00          # mov    $0xc,%eax
+        0f 05                   # syscall
+        49 89 c6                # mov    %rax,%r14
+        49 89 da                # mov    %rbx,%r10
+
+fill_loop:
+        49 c7 02 ff ff ff ff    # movq   $0xffffffffffffffff,(%r10)
+        49 83 c2 08             # add    $0x8,%r10
+        49 39 fa                # cmp    %rdi,%r10
+        jl fill_loop
+        49 89 da                # mov    %rbx,%r10
+        41 c7 02 7f 45 4c 46    # movl   $0x464c457f,(%r10)
+        41 c6 42 04 02          # movb   $0x2,0x4(%r10)
+        41 c6 42 05 01          # movb   $0x1,0x5(%r10)
+        41 c6 42 06 01          # movb   $0x1,0x6(%r10)
+        41 c6 42 07 00          # movb   $0x0,0x7(%r10)
+        41 c6 42 08 00          # movb   $0x0,0x8(%r10)
+        49 c7 42 09 00 00 00    # movq   $0x0,0x9(%r10)
+        00
+        66 41 c7 42 10 02 00    # movw   $0x2,0x10(%r10)
+        66 41 c7 42 12 3e 00    # movw   $0x3e,0x12(%r10)
+        41 c7 42 14 01 00 00    # movl   $0x1,0x14(%r10)
+        00
+        49 c7 42 18 00 10 40    # movq   $0x401000,0x18(%r10)
+        00
+        49 c7 42 20 40 00 00    # movq   $0x40,0x20(%r10)
+        00
+        49 c7 42 28 ff ff ff    # movq   $0xffffffffffffffff,0x28(%r10)
+        ff
+        41 c7 42 30 00 00 00    # movl   $0x0,0x30(%r10)
+        00
+        66 41 c7 42 34 40 00    # movw   $0x40,0x34(%r10)
+        66 41 c7 42 36 38 00    # movw   $0x38,0x36(%r10)
+        66 41 c7 42 38 03 00    # movw   $0x3,0x38(%r10)
+        66 41 c7 42 3a 40 00    # movw   $0x40,0x3a(%r10)
+        66 41 c7 42 3c 04 00    # movw   $0x4,0x3c(%r10)
+        66 41 c7 42 3e 03 00    # movw   $0x3,0x3e(%r10)
+        49 83 c2 40             # add    $0x40,%r10
+        41 c7 02 01 00 00 00    # movl   $0x1,(%r10)
+        41 c7 42 04 04 00 00    # movl   $0x4,0x4(%r10)
+        00
+        49 c7 42 08 00 00 00    # movq   $0x0,0x8(%r10)
+        00
+        49 c7 42 10 00 00 40    # movq   $0x400000,0x10(%r10)
+        00
+        49 c7 42 18 00 00 40    # movq   $0x400000,0x18(%r10)
+        00
+        49 c7 42 20 e8 00 00    # movq   $0xe8,0x20(%r10)
+        00
+        49 c7 42 28 e8 00 00    # movq   $0xe8,0x28(%r10)
+        00
+        49 c7 42 30 00 10 00    # movq   $0x1000,0x30(%r10)
+        00
+        49 83 c2 38             # add    $0x38,%r10
+        41 c7 02 01 00 00 00    # movl   $0x1,(%r10)
+        41 c7 42 04 05 00 00    # movl   $0x5,0x4(%r10)
+        00
+        49 c7 42 08 00 10 00    # movq   $0x1000,0x8(%r10)
+        00
+        49 c7 42 10 00 10 40    # movq   $0x401000,0x10(%r10)
+        00
+        49 c7 42 18 00 10 40    # movq   $0x401000,0x18(%r10)
+        00
+        49 c7 42 20 ff ff ff    # movq   $0xffffffffffffffff,0x20(%r10)
+        ff
+        49 c7 42 28 ff ff ff    # movq   $0xffffffffffffffff,0x28(%r10)
+        ff
+        49 c7 42 30 00 10 00    # movq   $0x1000,0x30(%r10)
+        00
+        49 83 c2 38             # add    $0x38,%r10
+        41 c7 02 01 00 00 00    # movl   $0x1,(%r10)
+        41 c7 42 04 04 00 00    # movl   $0x4,0x4(%r10)
+        00
+        49 c7 42 08 00 20 00    # movq   $0x2000,0x8(%r10)
+        00
+        49 c7 42 10 00 20 40    # movq   $0x402000,0x10(%r10)
+        00
+        49 c7 42 18 00 20 40    # movq   $0x402000,0x18(%r10)
+        00
+        49 c7 42 20 ff ff ff    # movq   $0xffffffffffffffff,0x20(%r10)
+        ff
+        49 c7 42 28 ff ff ff    # movq   $0xffffffffffffffff,0x28(%r10)
+        ff
+        49 c7 42 30 00 10 00    # movq   $0x1000,0x30(%r10)
+        00
+        49 89 ff                # mov    %rdi,%r15
+
+scan_loop:
+        call scan
+        48 83 f8 ff             # cmp    $0xffffffffffffffff,%rax
+        je ident_pass
+        48 83 f8 00             # cmp    $0x0,%rax
+        jne scan_loop1
+
+print_hex:
+        49 83 c5 02             # add    $0x2,%r13
+        4d 39 e5                # cmp    %r12,%r13
+        jg scan_loop
+        49 0f b6 55 fe          # movzbq -0x2(%r13),%rdx
+        call hex_to_byte
+        41 88 d2                # mov    %dl,%r10b
+        49 0f b6 55 ff          # movzbq -0x1(%r13),%rdx
+        call hex_to_byte
+        41 c0 e2 04             # shl    $0x4,%r10b
+        44 00 d2                # add    %r10b,%dl
+        call putc
+        jmp print_hex
+
+scan_loop1:
+        48 83 f8 01             # cmp    $0x1,%rax
+        jne scan_loop2
+        4d 89 e2                # mov    %r12,%r10
+        4d 29 ea                # sub    %r13,%r10
+        49 d1 e2                # shl    %r10
+        41 52                   # push   %r10
+        41 55                   # push   %r13
+        41 57                   # push   %r15
+        jmp scan_loop
+
+scan_loop2:
+        48 83 f8 02             # cmp    $0x2,%rax
+        jne scan_loop3
+        4d 89 e2                # mov    %r12,%r10
+        4d 29 ea                # sub    %r13,%r10
+        49 d1 e2                # shl    %r10
+        49 ff c2                # inc    %r10
+        41 52                   # push   %r10
+        41 55                   # push   %r13
+        41 57                   # push   %r15
+        ba 7f 00 00 00          # mov    $0x7f,%edx
+        call putc
+        call putc
+        call putc
+        call putc
+        jmp scan_loop
+
+scan_loop3:
+        48 83 f8 03             # cmp    $0x3,%rax
+        jne scan_loop4
+        call scan
+        48 83 f8 02             # cmp    $0x2,%rax
+        je process_section0
+        48 be af 20 40 00 00    # movabs $0x4020af,%rsi
+        00 00 00
+        ba 1d 00 00 00          # mov    $0x1d,%edx
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        0f 05                   # syscall
+        jmp exit_failure
+
+process_section0:
+        call finish_section
+        4c 89 ef                # mov    %r13,%rdi
+        4c 89 e2                # mov    %r12,%rdx
+        4c 29 ea                # sub    %r13,%rdx
+        48 83 fa 05             # cmp    $0x5,%rdx
+        jne process_section1
+        48 be 01 21 40 00 00    # movabs $0x402101,%rsi
+        00 00 00
+        call strncmp
+        48 85 c0                # test   %rax,%rax
+        je process_section_text
+
+process_section1:
+        48 83 fa 07             # cmp    $0x7,%rdx
+        jne process_section2
+        48 be 06 21 40 00 00    # movabs $0x402106,%rsi
+        00 00 00
+        call strncmp
+        48 85 c0                # test   %rax,%rax
+        je process_section_rodata
+
+process_section2:
+        48 be af 20 40 00 00    # movabs $0x4020af,%rsi
+        00 00 00
+        ba 1d 00 00 00          # mov    $0x1d,%edx
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        0f 05                   # syscall
+        jmp exit_failure
+
+process_section_text:
+        48 c7 45 e8 00 00 00    # movq   $0x0,-0x18(%rbp)
+        00
+        4c 89 7d e0             # mov    %r15,-0x20(%rbp)
+        jmp scan_loop
+
+process_section_rodata:
+        48 c7 45 e8 01 00 00    # movq   $0x1,-0x18(%rbp)
+        00
+        4c 89 7d d0             # mov    %r15,-0x30(%rbp)
+        jmp scan_loop
+
+scan_loop4:
+        48 83 e8 04             # sub    $0x4,%rax
+        48 6b c0 0c             # imul   $0xc,%rax,%rax
+        48 05 20 20 40 00       # add    $0x402020,%rax
+        41 54                   # push   %r12
+        41 55                   # push   %r13
+        4c 8d 68 0a             # lea    0xa(%rax),%r13
+        4c 0f b6 60 09          # movzbq 0x9(%rax),%r12
+
+put_bytes:
+        49 0f b6 55 00          # movzbq 0x0(%r13),%rdx
+        call putc
+        49 ff c5                # inc    %r13
+        49 ff cc                # dec    %r12
+        4d 85 e4                # test   %r12,%r12
+        jne put_bytes
+        41 5d                   # pop    %r13
+        41 5c                   # pop    %r12
+        jmp scan_loop
+
+scan_restart:
+        49 ff c4                # inc    %r12
+
+scan:
+        49 39 dc                # cmp    %rbx,%r12
+        jl scan0
+        48 c7 c0 ff ff ff ff    # mov    $0xffffffffffffffff,%rax
+        c3                      # ret
+
+scan0:
+        4d 89 e5                # mov    %r12,%r13
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 23                   # cmp    $0x23,%al
+        je scan_comment
+        3c 2e                   # cmp    $0x2e,%al
+        je scan_ident
+        3c 30                   # cmp    $0x30,%al
+        jl scan_restart
+        3c 39                   # cmp    $0x39,%al
+        jle scan_hex
+        3c 41                   # cmp    $0x41,%al
+        jl scan_restart
+        3c 46                   # cmp    $0x46,%al
+        jle scan_mhex
+        3c 5a                   # cmp    $0x5a,%al
+        jle scan_ident
+        3c 5f                   # cmp    $0x5f,%al
+        je scan_ident
+        3c 61                   # cmp    $0x61,%al
+        jl scan_restart
+        3c 66                   # cmp    $0x66,%al
+        jle scan_mhex
+        3c 73                   # cmp    $0x73,%al
+        je scan_msection
+        3c 7a                   # cmp    $0x7a,%al
+        jle scan_ident
+        jmp scan_restart
+
+scan_mhex:
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_hex_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 30                   # cmp    $0x30,%al
+        jl scan_hex_end
+        3c 39                   # cmp    $0x39,%al
+        jle scan_mhex
+        3c 3a                   # cmp    $0x3a,%al
+        jle scan_label_end
+        3c 41                   # cmp    $0x41,%al
+        jl scan_hex_end
+        3c 46                   # cmp    $0x46,%al
+        jle scan_mhex
+        3c 5a                   # cmp    $0x5a,%al
+        jle scan_ident
+        3c 5f                   # cmp    $0x5f,%al
+        je scan_ident
+        3c 61                   # cmp    $0x61,%al
+        jl scan_hex_end
+        3c 66                   # cmp    $0x66,%al
+        jle scan_mhex
+        3c 7a                   # cmp    $0x7a,%al
+        jle scan_ident
+        jmp scan_hex_end
+
+scan_hex:
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_hex_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 30                   # cmp    $0x30,%al
+        jl scan_hex_end
+        3c 39                   # cmp    $0x39,%al
+        jle scan_hex
+        3c 41                   # cmp    $0x41,%al
+        jl scan_hex_end
+        3c 46                   # cmp    $0x46,%al
+        jle scan_hex
+        3c 61                   # cmp    $0x61,%al
+        jl scan_hex_end
+        3c 66                   # cmp    $0x66,%al
+        jle scan_hex
+
+scan_hex_end:
+        b8 00 00 00 00          # mov    $0x0,%eax
+        c3                      # ret
+
+scan_msection:
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 65                   # cmp    $0x65,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 63                   # cmp    $0x63,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 74                   # cmp    $0x74,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 69                   # cmp    $0x69,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 6f                   # cmp    $0x6f,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 6e                   # cmp    $0x6e,%al
+        jne scan_ident_cmp
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        b8 03 00 00 00          # mov    $0x3,%eax
+        c3                      # ret
+
+scan_ident:
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jge scan_ident_end
+        49 0f b6 04 24          # movzbq (%r12),%rax
+
+scan_ident_cmp:
+        3c 30                   # cmp    $0x30,%al
+        jl scan_ident_end
+        3c 39                   # cmp    $0x39,%al
+        jle scan_ident
+        3c 3a                   # cmp    $0x3a,%al
+        je scan_label_end
+        3c 41                   # cmp    $0x41,%al
+        jl scan_ident_end
+        3c 5a                   # cmp    $0x5a,%al
+        jle scan_ident
+        3c 5f                   # cmp    $0x5f,%al
+        je scan_ident
+        3c 61                   # cmp    $0x61,%al
+        jl scan_ident_end
+        3c 7a                   # cmp    $0x7a,%al
+        jle scan_ident
+
+scan_ident_end:
+        41 56                   # push   %r14
+        4d 31 f6                # xor    %r14,%r14
+        41 57                   # push   %r15
+        49 bf 20 20 40 00 00    # movabs $0x402020,%r15
+        00 00 00
+        4c 89 e2                # mov    %r12,%rdx
+        4c 29 ea                # sub    %r13,%rdx
+        4c 89 ee                # mov    %r13,%rsi
+
+table_loop:
+        41 3a 57 08             # cmp    0x8(%r15),%dl
+        jne table_loop_continue
+        49 8b 3f                # mov    (%r15),%rdi
+        call strncmp
+        48 85 c0                # test   %rax,%rax
+        jne table_loop_continue
+        4c 89 f0                # mov    %r14,%rax
+        48 83 c0 04             # add    $0x4,%rax
+        41 5f                   # pop    %r15
+        41 5e                   # pop    %r14
+        c3                      # ret
+
+table_loop_continue:
+        49 83 c7 0c             # add    $0xc,%r15
+        49 ff c6                # inc    %r14
+        49 83 fe 0a             # cmp    $0xa,%r14
+        jl table_loop
+        b8 02 00 00 00          # mov    $0x2,%eax
+        41 5f                   # pop    %r15
+        41 5e                   # pop    %r14
+        c3                      # ret
+
+scan_label_end:
+        b8 01 00 00 00          # mov    $0x1,%eax
+        c3                      # ret
+
+scan_comment:
+        49 ff c4                # inc    %r12
+        49 39 dc                # cmp    %rbx,%r12
+        jl scan_comment0
+        48 c7 c0 ff ff ff ff    # mov    $0xffffffffffffffff,%rax
+        c3                      # ret
+
+scan_comment0:
+        49 0f b6 04 24          # movzbq (%r12),%rax
+        3c 0a                   # cmp    $0xa,%al
+        je scan
+        3c 0d                   # cmp    $0xd,%al
+        je scan
+        jmp scan_comment
+
+ident_pass:
+        4c 89 7d f0             # mov    %r15,-0x10(%rbp)
+        4c 8d 65 c0             # lea    -0x40(%rbp),%r12
+
+ident_loop:
+        49 39 e4                # cmp    %rsp,%r12
+        jle ident_loop_end
+        49 8b 14 24             # mov    (%r12),%rdx
+        48 f7 c2 01 00 00 00    # test   $0x1,%rdx
+        je ident_loop_continue
+        48 d1 ea                # shr    %rdx
+        49 8b 7c 24 f8          # mov    -0x8(%r12),%rdi
+        4c 8d 6d c0             # lea    -0x40(%rbp),%r13
+
+label_loop:
+        49 39 e5                # cmp    %rsp,%r13
+        jle label_loop_end
+        4d 8b 55 00             # mov    0x0(%r13),%r10
+        49 f7 c2 01 00 00 00    # test   $0x1,%r10
+        jne label_loop_continue
+        49 d1 ea                # shr    %r10
+        49 39 d2                # cmp    %rdx,%r10
+        jne label_loop_continue
+        49 8b 75 f8             # mov    -0x8(%r13),%rsi
+        call strncmp
+        48 85 c0                # test   %rax,%rax
+        jne label_loop_continue
+        4d 8b 55 f0             # mov    -0x10(%r13),%r10
+        4d 2b 54 24 f0          # sub    -0x10(%r12),%r10
+        49 83 ea 04             # sub    $0x4,%r10
+        4d 8b 5c 24 f0          # mov    -0x10(%r12),%r11
+        45 89 13                # mov    %r10d,(%r11)
+        jmp ident_loop_continue
+
+label_loop_continue:
+        49 83 ed 18             # sub    $0x18,%r13
+        jmp label_loop
+
+label_loop_end:
+        49 89 d5                # mov    %rdx,%r13
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 02 00 00 00          # mov    $0x2,%edi
+        48 be 98 20 40 00 00    # movabs $0x402098,%rsi
+        00 00 00
+        ba 17 00 00 00          # mov    $0x17,%edx
+        0f 05                   # syscall
+        b8 01 00 00 00          # mov    $0x1,%eax
+        49 8b 74 24 f8          # mov    -0x8(%r12),%rsi
+        4c 89 ea                # mov    %r13,%rdx
+        0f 05                   # syscall
+        b8 01 00 00 00          # mov    $0x1,%eax
+        48 be 00 21 40 00 00    # movabs $0x402100,%rsi
+        00 00 00
+        ba 01 00 00 00          # mov    $0x1,%edx
+        0f 05                   # syscall
+        jmp exit_failure
+
+ident_loop_continue:
+        49 83 ec 18             # sub    $0x18,%r12
+        jmp ident_loop
+
+ident_loop_end:
+        jmp exit
+
+finish_section:
+        80 7d e8 00             # cmpb   $0x0,-0x18(%rbp)
+        jne finish_section1
+        4c 89 7d d8             # mov    %r15,-0x28(%rbp)
+        jmp finish_section2
+
+finish_section1:
+        80 7d e8 01             # cmpb   $0x1,-0x18(%rbp)
+        jne finish_section2
+        4c 89 7d c8             # mov    %r15,-0x38(%rbp)
+
+finish_section2:
+        c3                      # ret
+
+stdin_to_heap:
+        b8 0c 00 00 00          # mov    $0xc,%eax
+        48 31 ff                # xor    %rdi,%rdi
+        0f 05                   # syscall
+        48 89 c6                # mov    %rax,%rsi
+        49 89 c4                # mov    %rax,%r12
+        ba 00 01 00 00          # mov    $0x100,%edx
+
+stdin_to_heap0:
+        48 8d be 00 01 00 00    # lea    0x100(%rsi),%rdi
+        b8 0c 00 00 00          # mov    $0xc,%eax
+        0f 05                   # syscall
+        48 31 c0                # xor    %rax,%rax
+        48 31 ff                # xor    %rdi,%rdi
+        0f 05                   # syscall
+        48 3d 00 01 00 00       # cmp    $0x100,%rax
+        jl stdin_to_heap1
+        48 81 c6 00 01 00 00    # add    $0x100,%rsi
+        jmp stdin_to_heap0
+
+stdin_to_heap1:
+        48 8d 1c 06             # lea    (%rsi,%rax,1),%rbx
+        4c 8d b6 00 01 00 00    # lea    0x100(%rsi),%r14
+        c3                      # ret
+
+strncmp:
+        31 c0                   # xor    %eax,%eax
+        48 85 d2                # test   %rdx,%rdx
+        jne strncmp2
+        jmp strncmp5
+
+strncmp1:
+        44 38 c1                # cmp    %r8b,%cl
+        jne strncmp3
+        48 ff c0                # inc    %rax
+        48 39 c2                # cmp    %rax,%rdx
+        je strncmp4
+
+strncmp2:
+        0f b6 0c 07             # movzbl (%rdi,%rax,1),%ecx
+        44 0f b6 04 06          # movzbl (%rsi,%rax,1),%r8d
+        84 c9                   # test   %cl,%cl
+        jne strncmp1
+
+strncmp3:
+        0f b6 c1                # movzbl %cl,%eax
+        44 29 c0                # sub    %r8d,%eax
+        c3                      # ret
+
+strncmp4:
+        31 c0                   # xor    %eax,%eax
+
+strncmp5:
+        c3                      # ret
+
+hex_to_byte:
+        80 fa 39                # cmp    $0x39,%dl
+        jg hex_to_byte1
+        80 ea 30                # sub    $0x30,%dl
+        jmp hex_to_byte3
+
+hex_to_byte1:
+        80 fa 46                # cmp    $0x46,%dl
+        jg hex_to_byte2
+        80 ea 37                # sub    $0x37,%dl
+        jmp hex_to_byte3
+
+hex_to_byte2:
+        80 ea 57                # sub    $0x57,%dl
+
+hex_to_byte3:
+        c3                      # ret
+
+putc:
+        4d 39 f7                # cmp    %r14,%r15
+        jl putc0
+        49 8d be 00 01 00 00    # lea    0x100(%r14),%rdi
+        b8 0c 00 00 00          # mov    $0xc,%eax
+        0f 05                   # syscall
+        49 89 fe                # mov    %rdi,%r14
+
+putc0:
+        41 88 17                # mov    %dl,(%r15)
+        49 ff c7                # inc    %r15
+        c3                      # ret
+
+write_padding:
+        49 89 fa                # mov    %rdi,%r10
+        bf 01 00 00 00          # mov    $0x1,%edi
+        48 be 26 21 40 00 00    # movabs $0x402126,%rsi
+        00 00 00
+        ba 00 01 00 00          # mov    $0x100,%edx
+
+write_padding1:
+        b8 01 00 00 00          # mov    $0x1,%eax
+        49 81 fa 00 01 00 00    # cmp    $0x100,%r10
+        49 0f 4e d2             # cmovle %r10,%rdx
+        49 81 ea 00 01 00 00    # sub    $0x100,%r10
+        0f 05                   # syscall
+        4d 85 d2                # test   %r10,%r10
+        jg write_padding1
+        c3                      # ret
+
+flush:
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        0f 05                   # syscall
+        c3                      # ret
+
+exit:
+        call finish_section
+        48 8b 75 f8             # mov    -0x8(%rbp),%rsi
+        4c 8b 55 d8             # mov    -0x28(%rbp),%r10
+        4c 2b 55 e0             # sub    -0x20(%rbp),%r10
+        4c 89 55 d8             # mov    %r10,-0x28(%rbp)
+        4c 89 96 98 00 00 00    # mov    %r10,0x98(%rsi)
+        4c 89 96 a0 00 00 00    # mov    %r10,0xa0(%rsi)
+        4c 8b 55 c8             # mov    -0x38(%rbp),%r10
+        4c 2b 55 d0             # sub    -0x30(%rbp),%r10
+        4c 89 55 c8             # mov    %r10,-0x38(%rbp)
+        4c 89 96 d0 00 00 00    # mov    %r10,0xd0(%rsi)
+        4c 89 96 d8 00 00 00    # mov    %r10,0xd8(%rsi)
+        44 89 d0                # mov    %r10d,%eax
+        ba 00 00 00 00          # mov    $0x0,%edx
+        b9 00 01 00 00          # mov    $0x100,%ecx
+        f7 f1                   # div    %ecx
+        bf 00 01 00 00          # mov    $0x100,%edi
+        48 29 d7                # sub    %rdx,%rdi
+        57                      # push   %rdi
+        48 81 c7 00 20 00 00    # add    $0x2000,%rdi
+        4c 01 d7                # add    %r10,%rdi
+        48 89 7e 28             # mov    %rdi,0x28(%rsi)
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        ba e8 00 00 00          # mov    $0xe8,%edx
+        0f 05                   # syscall
+        bf 18 0f 00 00          # mov    $0xf18,%edi
+        call write_padding
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        48 8b 75 e0             # mov    -0x20(%rbp),%rsi
+        48 8b 55 d8             # mov    -0x28(%rbp),%rdx
+        0f 05                   # syscall
+        bf 00 10 00 00          # mov    $0x1000,%edi
+        48 29 d7                # sub    %rdx,%rdi
+        call write_padding
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        48 8b 75 d0             # mov    -0x30(%rbp),%rsi
+        48 8b 55 c8             # mov    -0x38(%rbp),%rdx
+        0f 05                   # syscall
+        41 5c                   # pop    %r12
+        4c 89 e7                # mov    %r12,%rdi
+        call write_padding
+        4c 8b 6d d8             # mov    -0x28(%rbp),%r13
+        4c 8b 75 c8             # mov    -0x38(%rbp),%r14
+        4d 8d be 00 21 00 00    # lea    0x2100(%r14),%r15
+        4d 01 e7                # add    %r12,%r15
+        4c 8b 55 f0             # mov    -0x10(%rbp),%r10
+        49 8d ba 00 01 00 00    # lea    0x100(%r10),%rdi
+        b8 0c 00 00 00          # mov    $0xc,%eax
+        0f 05                   # syscall
+        4d 89 d3                # mov    %r10,%r11
+        41 c7 03 00 00 00 00    # movl   $0x0,(%r11)
+        41 c7 43 04 00 00 00    # movl   $0x0,0x4(%r11)
+        00
+        49 c7 43 08 00 00 00    # movq   $0x0,0x8(%r11)
+        00
+        49 c7 43 10 00 00 00    # movq   $0x0,0x10(%r11)
+        00
+        49 c7 43 18 00 00 00    # movq   $0x0,0x18(%r11)
+        00
+        49 c7 43 20 00 00 00    # movq   $0x0,0x20(%r11)
+        00
+        41 c7 43 28 00 00 00    # movl   $0x0,0x28(%r11)
+        00
+        41 c7 43 2c 00 00 00    # movl   $0x0,0x2c(%r11)
+        00
+        49 c7 43 30 00 00 00    # movq   $0x0,0x30(%r11)
+        00
+        49 c7 43 38 00 00 00    # movq   $0x0,0x38(%r11)
+        00
+        49 83 c3 40             # add    $0x40,%r11
+        41 c7 03 0b 00 00 00    # movl   $0xb,(%r11)
+        41 c7 43 04 01 00 00    # movl   $0x1,0x4(%r11)
+        00
+        49 c7 43 08 06 00 00    # movq   $0x6,0x8(%r11)
+        00
+        49 c7 43 10 00 10 40    # movq   $0x401000,0x10(%r11)
+        00
+        49 c7 43 18 00 10 00    # movq   $0x1000,0x18(%r11)
+        00
+        4d 89 6b 20             # mov    %r13,0x20(%r11)
+        41 c7 43 28 00 00 00    # movl   $0x0,0x28(%r11)
+        00
+        41 c7 43 2c 00 00 00    # movl   $0x0,0x2c(%r11)
+        00
+        49 c7 43 30 10 00 00    # movq   $0x10,0x30(%r11)
+        00
+        49 c7 43 38 00 00 00    # movq   $0x0,0x38(%r11)
+        00
+        49 83 c3 40             # add    $0x40,%r11
+        41 c7 03 11 00 00 00    # movl   $0x11,(%r11)
+        41 c7 43 04 01 00 00    # movl   $0x1,0x4(%r11)
+        00
+        49 c7 43 08 02 00 00    # movq   $0x2,0x8(%r11)
+        00
+        49 c7 43 10 00 20 40    # movq   $0x402000,0x10(%r11)
+        00
+        49 c7 43 18 00 20 00    # movq   $0x2000,0x18(%r11)
+        00
+        4d 89 73 20             # mov    %r14,0x20(%r11)
+        41 c7 43 28 00 00 00    # movl   $0x0,0x28(%r11)
+        00
+        41 c7 43 2c 00 00 00    # movl   $0x0,0x2c(%r11)
+        00
+        49 c7 43 30 04 00 00    # movq   $0x4,0x30(%r11)
+        00
+        49 c7 43 38 00 00 00    # movq   $0x0,0x38(%r11)
+        00
+        49 83 c3 40             # add    $0x40,%r11
+        41 c7 03 01 00 00 00    # movl   $0x1,(%r11)
+        41 c7 43 04 03 00 00    # movl   $0x3,0x4(%r11)
+        00
+        49 c7 43 08 00 00 00    # movq   $0x0,0x8(%r11)
+        00
+        49 c7 43 10 00 00 00    # movq   $0x0,0x10(%r11)
+        00
+        4d 89 7b 18             # mov    %r15,0x18(%r11)
+        49 c7 43 20 19 00 00    # movq   $0x19,0x20(%r11)
+        00
+        41 c7 43 28 00 00 00    # movl   $0x0,0x28(%r11)
+        00
+        41 c7 43 2c 00 00 00    # movl   $0x0,0x2c(%r11)
+        00
+        49 c7 43 30 01 00 00    # movq   $0x1,0x30(%r11)
+        00
+        49 c7 43 38 00 00 00    # movq   $0x0,0x38(%r11)
+        00
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        4c 89 d6                # mov    %r10,%rsi
+        ba 00 01 00 00          # mov    $0x100,%edx
+        0f 05                   # syscall
+        b8 01 00 00 00          # mov    $0x1,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        48 be 0d 21 40 00 00    # movabs $0x40210d,%rsi
+        00 00 00
+        ba 19 00 00 00          # mov    $0x19,%edx
+        0f 05                   # syscall
+        b8 3c 00 00 00          # mov    $0x3c,%eax
+        bf 00 00 00 00          # mov    $0x0,%edi
+        0f 05                   # syscall
+
+exit_failure:
+        b8 3c 00 00 00          # mov    $0x3c,%eax
+        bf 01 00 00 00          # mov    $0x1,%edi
+        0f 05                   # syscall
+
+
+section .rodata
+
+
+# Instruction Mnemonic Table
+63 61 6c 6c           # [0x2000]    "call"
+6a 65                 # [0x2004]    "je"
+6a 67                 # [0x2006]    "jg"
+6a 67 65              # [0x2008]    "jge"
+6a 6c                 # [0x200B]    "jl"
+6a 6c 65              # [0x200D]    "jle"
+6a 6d 70              # [0x2010]    "jmp"
+6a 6e 65              # [0x2013]    "jne"
+72 65 74              # [0x2016]    "ret"
+73 79 73 63 61 6c 6c  # [0x2019]    "syscall"
+
+# Instruction Lookup Table
+# Mnemonic Address,      M. Length, Ins. Length, Opcodes
+00 20 40 00 00 00 00 00  04         01           e8 00        # call
+04 20 40 00 00 00 00 00  02         02           0f 84        # je
+06 20 40 00 00 00 00 00  02         02           0f 8f        # jg
+08 20 40 00 00 00 00 00  03         02           0f 8d        # jge
+0b 20 40 00 00 00 00 00  02         02           0f 8c        # jl
+0d 20 40 00 00 00 00 00  03         02           0f 8e        # jle
+10 20 40 00 00 00 00 00  03         01           e9 00        # jmp
+13 20 40 00 00 00 00 00  03         02           0f 85        # jne
+16 20 40 00 00 00 00 00  03         01           c3 00        # ret
+19 20 40 00 00 00 00 00  07         02           0f 05        # syscall
+
+# Error Messages
+# error: no label found:
+65 72 72 6f 72 3a 20 6e
+6f 20 6c 61 62 65 6c 20
+66 6f 75 6e 64 3a 20
+
+# error: expected section name
+65 72 72 6f 72 3a 20 65
+78 70 65 63 74 65 64 20
+73 65 63 74 69 6f 6e 20
+6e 61 6d 65 0a
+
+# error: code must begin with a `section` declaration
+65 72 72 6f 72 3a 20 63
+6f 64 65 20 6d 75 73 74
+20 62 65 67 69 6e 20 77
+69 74 68 20 61 20 60 73
+65 63 74 69 6f 6e 60 20
+64 65 63 6c 61 72 61 74
+69 6f 6e 0a
+
+# \n
+0a
+
+# Section Label Table
+2E 74 65 78 74       # ".text"
+2E 72 6F 64 61 74 61 # ".rodata"
+
+# shstrtab
+00                               # Leading Zero Byte +0x1
+2e 73 68 73 74 72 74 61 62 00    # ".shstrtab"       +0xA
+2e 74 65 78 74 00                # ".text"           +0x6
+2e 72 6f 64 61 74 61 00          # ".rodata"         +0x8
+
+
+# Zeros buffer (256)
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
