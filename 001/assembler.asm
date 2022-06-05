@@ -32,52 +32,52 @@ prompt:
 	inc r15         ; increment buffer pointer
 	inc r14         ; increment buffer index
 	cmp r14, outsz
-	jl continue
+	jl NEAR continue
 	call flush      ; if the output buffer is full, flush it
 continue:
-	jmp prompt
+	jmp QWORD prompt
 gethex:
 	call getchar
 	cmp al, '#'
-	je comment
+	je NEAR comment
 	cmp al, '0'
-	jl gethex
+	jl NEAR gethex
 	cmp al, '9'
-	jg gethex1
+	jg NEAR gethex1
 	sub al, '0'
-	jmp rethex
+	jmp QWORD rethex
 gethex1:
 	cmp al, 'A'
-	jl gethex
+	jl NEAR gethex
 	cmp al, 'F'
-	jg gethex2
+	jg NEAR gethex2
 	sub al, 'A'-0xA
-	jmp rethex
+	jmp QWORD rethex
 gethex2:
 	cmp al, 'a'
-	jl gethex
+	jl NEAR gethex
 	cmp al, 'f'
-	jg gethex
+	jg NEAR gethex
 	sub al, 'a'-0xA
 rethex:
 	ret
 comment:
 	call getchar
 	cmp al, `\n`
-	je gethex
+	je NEAR gethex
 	cmp al, `\r`
-	je gethex
-	jmp comment
+	je NEAR gethex
+	jmp QWORD comment
 getchar:
 	cmp r12, r13    ; check if index has reached end of input buffer
-	jl nextchar
+	jl NEAR nextchar
 	xor rax, rax    ; read()
 	xor rdi, rdi    ; STDIN
 	mov rsi, inbuf  ; buf
 	mov edx, insz   ; count
 	syscall
 	cmp rax, 0x0    ; if read() returned 0...
-	je done         ; ...flush and exit
+	je NEAR done    ; ...flush and exit
 	mov r13, rax
 	xor r12, r12    ; reset input buf index
 nextchar:
@@ -86,7 +86,7 @@ nextchar:
 	ret
 done:
 	call flush
-	jmp exit
+	jmp QWORD exit
 flush:
 	mov eax, 0x1    ; write()
 	mov edi, 0x1    ; STDOUT
