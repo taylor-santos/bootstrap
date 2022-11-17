@@ -1,0 +1,418 @@
+     1                                  ; Copyright (c) 2022 Taylor Santos
+     2                                  ; MIT License
+     3                                  
+     4                                  ; assembler.asm
+     5                                  bits    64
+     6                                  global  _start
+     7                                  
+     8                                  brkinc: equ 4096
+     9                                  
+    10                                  section .rodata
+    11 00000000 63616C6C                    im_call:    db      'call'
+    12                                      il_call     equ $-im_call
+    13 00000004 636D70                      im_cmp:     db      'cmp'
+    14                                      il_cmp      equ $-im_cmp
+    15 00000007 696E63                      im_inc:     db      'inc'
+    16                                      il_inc      equ $-im_inc
+    17 0000000A 6A65                        im_je:      db      'je'
+    18                                      il_je       equ $-im_je
+    19 0000000C 6A6D70                      im_jmp:     db      'jmp'
+    20                                      il_jmp      equ $-im_jmp
+    21 0000000F 6A6E65                      im_jne:     db      'jne'
+    22                                      il_jne      equ $-im_jne
+    23 00000012 6C6561                      im_lea:     db      'lea'
+    24                                      il_lea      equ $-im_lea
+    25 00000015 6D6F76                      im_mov:     db      'mov'
+    26                                      il_mov      equ $-im_mov
+    27 00000018 726574                      im_ret:     db      'ret'
+    28                                      il_ret      equ $-im_ret
+    29 0000001B 737562                      im_sub:     db      'sub'
+    30                                      il_sub      equ $-im_sub
+    31 0000001E 73797363616C6C              im_syscall: db      'syscall'
+    32                                      il_syscall  equ $-im_syscall
+    33 00000025 74657374                    im_test:    db      'test'
+    34                                      il_test     equ $-im_test
+    35 00000029 786F72                      im_xor:     db      'xor'
+    36                                      il_xor      equ $-im_xor
+    37                                  
+    38                                  op_table:
+    39 0000002C [0000000000000000]          dq im_call
+    40                                      op_im_sz: equ $-op_table
+    41 00000034 04                          db il_call
+    42                                      op_row_sz: equ $-op_table
+    43 00000035 [0400000000000000]          dq im_cmp
+    44 0000003D 03                          db il_cmp
+    45 0000003E [0700000000000000]          dq im_inc
+    46 00000046 03                          db il_inc
+    47 00000047 [0A00000000000000]          dq im_je
+    48 0000004F 02                          db il_je
+    49 00000050 [0C00000000000000]          dq im_jmp
+    50 00000058 03                          db il_jmp
+    51 00000059 [0F00000000000000]          dq im_jne
+    52 00000061 03                          db il_jne
+    53 00000062 [1200000000000000]          dq im_lea
+    54 0000006A 03                          db il_lea
+    55 0000006B [1500000000000000]          dq im_mov
+    56 00000073 03                          db il_mov
+    57 00000074 [1800000000000000]          dq im_ret
+    58 0000007C 03                          db il_ret
+    59 0000007D [1B00000000000000]          dq im_sub
+    60 00000085 03                          db il_sub
+    61 00000086 [1E00000000000000]          dq im_syscall
+    62 0000008E 07                          db il_syscall
+    63 0000008F [2500000000000000]          dq im_test
+    64 00000097 04                          db il_test
+    65 00000098 [2900000000000000]          dq im_xor
+    66 000000A0 03                          db il_xor
+    67                                  
+    68                                      op_table_end: equ $
+    69                                      op_row_ct: equ (op_table_end-op_table)/op_row_sz
+    70                                  
+    71 000000A1 0A00                    newline: db `\n`, 0
+    72                                  
+    73                                  section .bss
+    74                                  
+    75                                  section .text
+    76                                  _start:
+    77                                      ; call brk(0) to get start of break
+    78 00000000 31FF                        xor edi, edi
+    79 00000002 E83D020000                  call brk
+    80                                      ; save start of break to $RBX
+    81 00000007 4889C3                      mov rbx, rax
+    82                                      ; read in
+    83 0000000A E8C3010000                  call stdin_to_heap
+    84                                      ; tokenize input
+    85 0000000F 4889DF                      mov rdi, rbx                ; arg1 - buf
+    86 00000012 4889C6                      mov rsi, rax                ; arg2 - count
+    87 00000015 E850000000                  call tokenize
+    88                                      ; exit(0)
+    89 0000001A 31FF                        xor edi, edi
+    90 0000001C E971020000                  jmp exit
+    91                                  
+    92                                  
+    93                                  ; EDI - char
+    94                                  is_ident_start:
+    95 00000021 4080FF2E                    cmp dil, '.'
+    96 00000025 7428                        je is_ident2
+    97 00000027 83EF41                      sub edi, 'A'
+    98 0000002A 4080FF39                    cmp dil, '9'
+    99 0000002E 7625                        jna is_ident3
+   100 00000030 31C0                        xor eax, eax
+   101 00000032 C3                          ret
+   102                                  
+   103                                  ; EDI - char
+   104                                  is_ident:
+   105 00000033 4080FF39                    cmp dil, '9'
+   106 00000037 760C                        jbe is_ident1
+   107 00000039 83EF41                      sub edi, 'A'
+   108 0000003C 4080FF39                    cmp dil, '9'
+   109 00000040 7613                        jna is_ident3
+   110 00000042 31C0                        xor eax, eax
+   111 00000044 C3                          ret
+   112                                  is_ident1:
+   113 00000045 31C0                        xor eax, eax
+   114 00000047 4080FF2F                    cmp dil, 47
+   115 0000004B 0F97C0                      seta al
+   116 0000004E C3                          ret
+   117                                  
+   118                                  is_ident2:
+   119 0000004F B801000000                  mov eax, 1
+   120 00000054 C3                          ret
+   121                                  
+   122                                  is_ident3:
+   123 00000055 48B8FFFFFF43FFFFFF-         mov rax, 0x3FFFFFF43FFFFFF
+   123 0000005E 03                 
+   124 0000005F 480FA3F8                    bt rax, rdi
+   125 00000063 0F92C0                      setc al
+   126 00000066 0FB6C0                      movzx eax, al
+   127 00000069 C3                          ret
+   128                                  
+   129                                  ; RDI - input string
+   130                                  ; RSI - input length
+   131                                  tokenize:
+   132 0000006A 4989FB                      mov r11, rdi                ; store input ptr in r11
+   133 0000006D 4C8D2437                    lea r12, [rdi + rsi]        ; store input end ptr in r12
+   134 00000071 4C89E5                      mov rbp, r12                ; store next available heap loc in rbp
+   135                                      ; get current program break and store it in r15
+   136 00000074 31FF                        xor edi, edi
+   137 00000076 E8C9010000                  call brk
+   138 0000007B 4989C7                      mov r15, rax
+   139                                  tokenize_loop:
+   140                                      ; check if at end of input
+   141 0000007E 4D39E3                      cmp r11, r12
+   142                                      ; end loop if at end
+   143 00000081 0F8DA6000000                jge tokenize_end
+   144 00000087 458A2B                      mov r13b, BYTE [r11]        ; get current char in r13b
+   145                                      ; call is_ident_start() on current char
+   146 0000008A 4489EF                      mov edi, r13d
+   147 0000008D E88FFFFFFF                  call is_ident_start
+   148 00000092 4885C0                      test rax, rax
+   149 00000095 750B                        jne tokenize_ident
+   150                                  
+   151 00000097 4183FD23                    cmp r13d, '#'
+   152 0000009B 7458                        je tokenize_comment
+   153                                  
+   154 0000009D 49FFC3                      inc r11
+   155 000000A0 EBDC                        jmp tokenize_loop
+   156                                  
+   157                                  tokenize_ident:
+   158                                      ; char is ident
+   159                                      ; TODO
+   160 000000A2 4D89DE                      mov r14, r11                ; store start of ident in r14
+   161                                  tokenize_ident2:
+   162 000000A5 49FFC3                      inc r11
+   163                                      ; check for end of input
+   164 000000A8 4D39E3                      cmp r11, r12
+   165                                      ; end loop if at end
+   166 000000AB 7D10                        jge tokenize_keyword
+   167 000000AD 458A2B                      mov r13b, BYTE [r11]        ; store current char in r13b
+   168                                      ; check if char is alphanumeric
+   169 000000B0 4489EF                      mov edi, r13d
+   170 000000B3 E87BFFFFFF                  call is_ident
+   171 000000B8 4885C0                      test rax, rax
+   172 000000BB 75E8                        jne tokenize_ident2
+   173                                  
+   174                                  tokenize_keyword:
+   175                                      ; finished lexing ident, check if it's a known keyword
+   176 000000BD 4C89F7                      mov rdi, r14
+   177 000000C0 4C89DE                      mov rsi, r11
+   178 000000C3 4C29F6                      sub rsi, r14
+   179 000000C6 E8C6000000                  call match_keyword
+   180 000000CB 4883F8FF                    cmp rax, -1
+   181 000000CF 743D                        je tokenize_found_ident
+   182                                      ; found keyword
+   183 000000D1 4C89F7                      mov rdi, r14
+   184 000000D4 4C89DE                      mov rsi, r11
+   185 000000D7 4C29F6                      sub rsi, r14
+   186 000000DA E84C010000                  call puts
+   187                                  
+   188 000000DF 48BF-                       mov rdi, newline
+   188 000000E1 [A100000000000000] 
+   189 000000E9 BE01000000                  mov rsi, 1
+   190 000000EE E838010000                  call puts
+   191                                  
+   192 000000F3 EB89                        jmp tokenize_loop
+   193                                  
+   194                                  tokenize_comment:
+   195                                      ; comment
+   196 000000F5 49FFC3                      inc r11
+   197 000000F8 4D39E3                      cmp r11, r12
+   198                                      ; end loop if at end
+   199 000000FB 7D30                        jge tokenize_end
+   200                                      ; loop until newline is encountered
+   201 000000FD 458A2B                      mov r13b, BYTE [r11]        ; store current char in r13b
+   202 00000100 4180FD0A                    cmp r13b, `\n`
+   203 00000104 75EF                        jne tokenize_comment
+   204                                  
+   205 00000106 49FFC3                      inc r11
+   206 00000109 E970FFFFFF                  jmp tokenize_loop
+   207                                  
+   208                                  tokenize_found_ident:
+   209 0000010E 31FF                        xor edi, edi                ; token type 0 = ident
+   210 00000110 4C89DE                      mov rsi, r11                ;
+   211 00000113 4C29F6                      sub rsi, r14                ; ident length
+   212 00000116 4C89F2                      mov rdx, r14                ; ident ptr
+   213 00000119 4889E9                      mov rcx, rbp                ; heap ptr
+   214 0000011C 4D89F8                      mov r8, r15                 ; brk
+   215 0000011F E80A000000                  call write_token
+   216 00000124 4883C518                    add rbp, 3 * 8              ; increment heap ptr
+   217 00000128 E951FFFFFF                  jmp tokenize_loop
+   218                                  
+   219                                  tokenize_end:
+   220 0000012D C3                          ret
+   221                                  
+   222                                  ; RDI - token type
+   223                                  ; RSI - token data1
+   224                                  ; RDX - token data2
+   225                                  ; RCX - heap pointer
+   226                                  ; R8  - current program break
+   227                                  write_token:
+   228 0000012E 4155                        push r13
+   229 00000130 4C89C0                      mov rax, r8
+   230 00000133 4989F5                      mov r13, rsi
+   231 00000136 4154                        push r12
+   232 00000138 4989FC                      mov r12, rdi
+   233 0000013B 55                          push rbp
+   234 0000013C 4889D5                      mov rbp, rdx
+   235 0000013F 488D5118                    lea rdx, [rcx + 3 * 8]
+   236 00000143 53                          push rbx
+   237 00000144 4889CB                      mov rbx, rcx
+   238 00000147 4883EC08                    sub rsp, 8
+   239 0000014B 4C39C2                      cmp rdx, r8
+   240 0000014E 7316                        jnb write_token2
+   241                                  write_token1:
+   242 00000150 4C8923                       mov QWORD [rbx + 0 * 8], r12   ; token type
+   243 00000153 4C896B08                     mov QWORD [rbx + 1 * 8], r13   ; data1
+   244 00000157 48896B10                     mov QWORD [rbx + 2 * 8], rbp   ; data2
+   245 0000015B 4883C408                     add rsp, 8
+   246 0000015F 5B                           pop rbx
+   247 00000160 5D                           pop rbp
+   248 00000161 415C                         pop r12
+   249 00000163 415D                         pop r13
+   250 00000165 C3                           ret
+   251                                  write_token2:
+   252 00000166 498DB800100000               lea rdi, [r8 + brkinc]
+   253 0000016D E8D2000000                   call brk
+   254 00000172 EBDC                         jmp write_token1
+   255                                  
+   256                                  ; RDI - char
+   257                                  is_alpha:
+   258 00000174 83E7DF                      and edi, -33                ; unset the 6th bit to make uppercase
+   259 00000177 31C0                        xor eax, eax
+   260 00000179 83EF41                      sub edi, 'A'                ; shift values so 'A'=0 and 'Z'=25
+   261 0000017C 4080FF19                    cmp dil, 25
+   262 00000180 0F96C0                      setbe al                    ; set RAX to 1 if the value is between 0 and 25 inclusive, 0 otherwise
+   263 00000183 C3                          ret
+   264                                  
+   265                                  ; RDI - char
+   266                                  is_num:
+   267 00000184 83EF30                      sub edi, '0'                ; shift so '0'=0 and '9'=9
+   268 00000187 31C0                        xor eax, eax
+   269 00000189 4080FF09                    cmp dil, 9                  ; check if input is between 0 and 9 inclusive
+   270 0000018D 0F96C0                      setbe al
+   271 00000190 C3                          ret
+   272                                  
+   273                                  ; RDI - name string
+   274                                  ; RSI - name length
+   275                                  ; returns RAX - index of matched keyword, or -1 if no match
+   276                                  ; clobbers RDX, RCX (via strncmp), R8, R9, R10
+   277                                  match_keyword:
+   278 00000191 4889F2                      mov rdx, rsi           ; store str length in rdx, arg3 for strncmp
+   279 00000194 49BA-                       mov r10, op_table      ; store table ptr in R10
+   279 00000196 [2C00000000000000] 
+   280 0000019E 4531C9                      xor r9d, r9d           ; store index in r9
+   281                                  match_keyword1:
+   282 000001A1 458A4208                    mov r8b, BYTE [r10 + op_im_sz]
+   283                                      ; check if table entry is same length as argument
+   284 000001A5 4939D0                      cmp r8, rdx
+   285                                      ; loop if different lengths
+   286 000001A8 7510                        jne match_keyword2
+   287                                      ; if same lengths, call strncmp
+   288 000001AA 498B32                      mov rsi, QWORD [r10]
+   289 000001AD E8A0000000                  call strncmp
+   290                                      ; if strings differ, increment and loop
+   291 000001B2 85C0                        test eax, eax
+   292 000001B4 7504                        jne match_keyword2
+   293                                      ; if strings match, return index
+   294 000001B6 4C89C8                      mov rax, r9
+   295 000001B9 C3                          ret
+   296                                  match_keyword2:
+   297                                      ; increment table pointer
+   298 000001BA 4983C209                    add r10, op_row_sz
+   299 000001BE 49FFC1                      inc r9
+   300                                      ; check if table ptr is at end and loop if not
+   301 000001C1 4981FA[A1000000]            cmp r10, op_table_end
+   302 000001C8 7CD7                        jl match_keyword1
+   303                                      ; if no matches found, return -1
+   304 000001CA 48C7C0FFFFFFFF              mov rax, -1
+   305 000001D1 C3                          ret
+   306                                  
+   307                                  
+   308                                  stdin_to_heap:
+   309 000001D2 4154                        push r12
+   310 000001D4 55                          push rbp
+   311 000001D5 53                          push rbx
+   312                                      ; initialize total count to 0
+   313 000001D6 31ED                        xor ebp, ebp
+   314                                      ; brk(0) to get intial break
+   315 000001D8 31FF                        xor edi, edi
+   316 000001DA E865000000                  call brk
+   317                                      ; store initial break in $RCX
+   318 000001DF 4889C3                      mov rbx, rax
+   319                                  stdin_to_heap1:
+   320                                      ; increment break by brkinc
+   321 000001E2 4989DC                      mov r12, rbx
+   322 000001E5 4881C300100000              add rbx, brkinc
+   323 000001EC 4889DF                      mov rdi, rbx
+   324 000001EF E850000000                  call brk
+   325                                      ; read brkinc bytes from stdin
+   326 000001F4 4C89E7                      mov rdi, r12
+   327 000001F7 BE00100000                  mov rsi, brkinc
+   328 000001FC E817000000                  call read_stdin
+   329                                      ; increment total count by amount read
+   330 00000201 4801C5                      add rbp, rax
+   331                                      ; continue reading if full amount was consumed
+   332 00000204 483D00100000                cmp rax, brkinc
+   333 0000020A 0F84D2FFFFFF                je NEAR stdin_to_heap1
+   334                                      ; set return value to total count
+   335 00000210 4889E8                      mov rax, rbp
+   336 00000213 5B                          pop rbx
+   337 00000214 5D                          pop rbp
+   338 00000215 415C                        pop r12
+   339 00000217 C3                          ret
+   340                                  
+   341                                  ; RDI - address of buffer
+   342                                  ; RSI - number of bytes to read
+   343                                  ; return RAX - number of bytes read
+   344                                  read_stdin:
+   345 00000218 4153                        push r11
+   346 0000021A 51                          push rcx
+   347 0000021B 31C0                        xor eax, eax                ; SYS_read
+   348 0000021D 4889F2                      mov rdx, rsi                ; count
+   349 00000220 4889FE                      mov rsi, rdi                ; buf
+   350 00000223 31FF                        xor edi, edi                ; STDIN
+   351 00000225 0F05                        syscall
+   352 00000227 59                          pop rcx
+   353 00000228 415B                        pop r11
+   354 0000022A C3                          ret
+   355                                  
+   356                                  ; RDI - address of buffer to read from
+   357                                  ; RSI - number of bytes to write
+   358                                  puts:
+   359 0000022B 4153                        push r11
+   360 0000022D 51                          push rcx
+   361 0000022E B801000000                  mov rax, 0x1                ; SYS_write
+   362 00000233 4889F2                      mov rdx, rsi                ; count
+   363 00000236 4889FE                      mov rsi, rdi                ; buf
+   364 00000239 BF01000000                  mov rdi, 0x1                ; STDOUT
+   365 0000023E 0F05                        syscall
+   366 00000240 59                          pop rcx
+   367 00000241 415B                        pop r11
+   368 00000243 C3                          ret
+   369                                  
+   370                                  
+   371                                  ; Sets the program break to the address supplied in $RDI
+   372                                  ; Returns the new break in $RAX
+   373                                  brk:
+   374 00000244 4153                        push r11
+   375 00000246 51                          push rcx
+   376 00000247 B80C000000                  mov rax, 0x0c               ; SYS_brk
+   377 0000024C 0F05                        syscall
+   378 0000024E 59                          pop rcx
+   379 0000024F 415B                        pop r11
+   380 00000251 C3                          ret
+   381                                  
+   382                                  ; RDI - str1
+   383                                  ; RSI - str2
+   384                                  ; RDX - n
+   385                                  ; return RAX: returns 0 if equal, otherwise relative difference of first different char
+   386                                  ; clobbers RCX, R8
+   387                                  strncmp:
+   388 00000252 31C0                        xor eax, eax
+   389 00000254 4885D2                      test rdx, rdx
+   390 00000257 0F851A000000                jne NEAR strncmp2
+   391 0000025D E92F000000                  jmp QWORD strncmp5
+   392                                  strncmp1:
+   393 00000262 4438C1                      cmp cl, r8b
+   394 00000265 0F851D000000                jne NEAR strncmp3
+   395 0000026B 48FFC0                      inc rax
+   396 0000026E 4839C2                      cmp rdx, rax
+   397 00000271 0F8418000000                je NEAR strncmp4
+   398                                  strncmp2:
+   399 00000277 0FB60C07                    movzx ecx, BYTE [rdi + rax]
+   400 0000027B 440FB60406                  movzx r8d, BYTE [rsi + rax]
+   401 00000280 84C9                        test cl, cl
+   402 00000282 0F85DAFFFFFF                jne NEAR strncmp1
+   403                                  strncmp3:
+   404 00000288 0FB6C1                      movzx eax, cl
+   405 0000028B 4429C0                      sub eax, r8d
+   406 0000028E C3                          ret
+   407                                  strncmp4:
+   408 0000028F 31C0                        xor eax, eax
+   409                                  strncmp5:
+   410 00000291 C3                          ret
+   411                                  
+   412                                  ; Terminates the process and returns the value supplied in $rdi
+   413                                  exit:
+   414 00000292 B83C000000                  mov rax, 0x3c               ; SYS_exit
+   415 00000297 0F05                        syscall                     ; exit()

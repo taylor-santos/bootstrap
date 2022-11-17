@@ -1,0 +1,5 @@
+#!/bin/bash
+
+nasm -g -f elf64 -o assembler.o -l assembler.lst -F dwarf assembler.asm &&
+gcc -m64 -o assembler -nostartfiles -no-pie assembler.o &&
+rm assembler.o

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+nasm -f elf64 -o assembler.o -Ov assembler.asm &&
+gcc -m64 -o assembler -nostartfiles -no-pie -O3 assembler.o &&
+rm assembler.o

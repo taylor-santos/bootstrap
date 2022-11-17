@@ -1,0 +1,5 @@
+#!/bin/bash
+for n in {0..127}; do 
+	cp assembler assembler$n;
+	awk '{ printf("%c", $0); }' <<< $n | dd of=assembler$n bs=1 seek=0 count=1 conv=notrunc;
+done
