@@ -4,7 +4,7 @@ CC=/usr/bin/gcc
 all: assembler
 
 c_assembler: assembler.c
-	$(CC) -o $@ $<
+	$(CC) -o $@ -g -nostdlib $<
 
 assembler: assembler.o assembler.lst
 	$(CC) -m64 -nostartfiles -no-pie -o $@ $<
