@@ -4,7 +4,7 @@ CC=/usr/bin/gcc
 all: assembler
 
 c_assembler: assembler.c
-	$(CC) -o $@ -nostdlib -nostartfiles -g -O0 $<
+	$(CC) -o $@ -nostdlib -nostartfiles -fomit-frame-pointer -fno-stack-protector -fcf-protection=none -Wno-builtin-declaration-mismatch -g -O0 $<
 
 assembler: assembler.o assembler.lst
 	$(CC) -m64 -nostartfiles -no-pie -o $@ $<

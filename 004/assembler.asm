@@ -411,5 +411,5 @@ strncmp5:
 
 ; Terminates the process and returns the value supplied in $rdi
 exit:
-    mov rax, 0x3c               ; SYS_exit
+    mov eax, 0x3c               ; SYS_exit
     syscall                     ; exit()
